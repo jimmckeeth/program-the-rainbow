@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Whatamesh</title>
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    #gradient-canvas {
+        width: 100%;
+        height: 100%;
+        /* Standard CSS variables - whatamesh requires standard hex values here */
+        --gradient-color-1: #c3e4ff; 
+        --gradient-color-2: #6ec3f4; 
+        --gradient-color-3: #eae2ff;  
+        --gradient-color-4: #b9beff;
+    }
+</style>
+</head>
+<body>
+    <canvas id="gradient-canvas" data-transition-in></canvas>
+
+    <script type="module">
+        import { Gradient } from 'https://esm.sh/whatamesh';
+
+        const gradient = new Gradient();
+        window.gradient = gradient;
+        gradient.initGradient('#gradient-canvas');
+
+        // 1. Helper to match whatamesh's internal color format
+        function normalizeColor(hexCode) {
+            const hex = parseInt(hexCode.replace('#', '0x'));
+            return [
+                ((hex >> 16) & 255) / 255,
+                ((hex >> 8) & 255) / 255,
+                (255 & hex) / 255,
+            ];
+        }
+
+        // 2. Helper for smooth transitions
+        function lerp(start, end, amt) {
+            return (1 - amt) * start + amt * end;
+        }
+
+        // 3. Define the palette to transition to
+        const targetColors = [
+            normalizeColor('#ff9a9e'),
+            normalizeColor('#fecfef'),
+            normalizeColor('#a18cd1'),
+            normalizeColor('#fbc2eb')
+        ];
+
+        // Wait for whatamesh to finish loading CSS vars before accessing uniforms
+        const checkReady = setInterval(() => {
+            if (gradient.uniforms) {
+                clearInterval(checkReady);
+                
+                // --- TWEAKING EXAMPLES ---
+                // gradient.updateFrequency(0.0001); // Increases wave detail/speed
+                // gradient.toggleColor(1); // Toggles off the second color layer
+                
+                startColorTransitions();
+            }
+        }, 100);
+
+        // function startColorTransitions() {
+        //     // Get references to the active WebGL color uniform arrays
+        //     const currentColors = [
+        //         gradient.uniforms.u_baseColor.value,
+        //         gradient.uniforms.u_waveLayers.value[0].value.color.value,
+        //         gradient.uniforms.u_waveLayers.value[1].value.color.value,
+        //         gradient.uniforms.u_waveLayers.value[2].value.color.value,
+        //     ];
+
+        //     function animateColors() {
+        //         // Lerp current WebGL colors toward the target colors
+        //         for (let i = 0; i < 4; i++) {
+        //             for (let j = 0; j < 3; j++) { // r, g, b
+        //                 currentColors[i][j] = lerp(currentColors[i][j], targetColors[i][j], 0.005);
+        //             }
+        //         }
+        //         requestAnimationFrame(animateColors);
+        //     }
+            
+        //     animateColors();
+        //}
+    </script>
+</body>
+</html>
