@@ -1,8 +1,20 @@
 /*
-https://github.com/jordienr/whatamesh
- */
+  Whatagradient — a WebGL animated gradient
+  Forked from: https://github.com/jordienr/whatamesh
+  Original: https://whatamesh.vercel.app/
 
-//Converting colors to proper format
+  Enhancements over the original:
+  - Supports up to 8 gradient colors (via CSS vars --gradient-color-1 through --gradient-color-8)
+  - Runtime API: setColor(), setSpeed(), setAmplitude(), setFrequency(), addColor(), removeColor()
+  - export { Gradient, normalizeColor }
+*/
+
+// ---------------------------------------------------------------------------
+// Color utilities
+// ---------------------------------------------------------------------------
+
+// Converts a packed 24-bit integer (e.g. 0xff6b6b) to a normalized [r, g, b]
+// array with each component in the 0.0–1.0 range for use in WebGL shaders.
 function normalizeColor(hexCode) {
   return [
     ((hexCode >> 16) & 255) / 255,
@@ -10,6 +22,18 @@ function normalizeColor(hexCode) {
     (255 & hexCode) / 255,
   ];
 }
+
+// Converts a normalized [r, g, b] array back to a CSS hex string (#rrggbb).
+// Useful for reading the current gradient colors back into UI controls.
+function normalizedToHex(normalized) {
+  return (
+    "#" +
+    normalized
+      .map((v) => Math.round(v * 255).toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
 ["SCREEN", "LINEAR_LIGHT"].reduce(
   (hexCode, t, n) =>
     Object.assign(hexCode, {
@@ -17,6 +41,10 @@ function normalizeColor(hexCode) {
     }),
   {}
 );
+
+// ---------------------------------------------------------------------------
+// MiniGl — minimal WebGL helper (Material, Uniform, PlaneGeometry, Mesh)
+// ---------------------------------------------------------------------------
 
 //Essential functionality of WebGl
 //t = width
@@ -189,8 +217,7 @@ class MiniGl {
                     (name_no_prefix =
                       name_no_prefix.charAt(0).toUpperCase() +
                       name_no_prefix.slice(1)),
-                    `uniform struct ${name_no_prefix} 
-                                    {\n` +
+                    `uniform struct ${name_no_prefix} \n                                    {\n` +
                       Object.entries(uniform.value)
                         .map(([name, uniform]) =>
                           uniform
@@ -472,6 +499,10 @@ class MiniGl {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Property initializer helper (used in Gradient constructor)
+// ---------------------------------------------------------------------------
+
 //Sets initial properties
 function e(object, propertyName, val) {
   return (
@@ -487,7 +518,37 @@ function e(object, propertyName, val) {
   );
 }
 
-//Gradient object
+// ---------------------------------------------------------------------------
+// Gradient — main class
+// ---------------------------------------------------------------------------
+
+/*
+ * Key tunable properties (set before or after init):
+ *
+ *   amp       — wave amplitude in pixels. Higher = more dramatic hills.
+ *               Default: 320. Range: 0 (flat) to ~600 (very dramatic).
+ *
+ *   seed      — noise seed. Changes the overall shape of the pattern.
+ *               Default: 5. Any integer gives a different look.
+ *
+ *   freqX     — horizontal noise frequency. Higher = more waves across X.
+ *               Default: 0.00014.
+ *
+ *   freqY     — vertical noise frequency. Higher = more waves across Y.
+ *               Default: 0.00029.
+ *
+ *   freqDelta — step size used by updateFrequency(). Default: 0.00001.
+ *
+ *   activeColors — 8-element array of 0/1 flags, one per color slot.
+ *               Default: [1,1,1,1,0,0,0,0] (first 4 slots active).
+ *               Use toggleColor(index) or setColor() to change at runtime.
+ *
+ * conf.density — [xDensity, yDensity] controls mesh resolution.
+ *               Higher = smoother gradient but more GPU work.
+ *               Default: [0.06, 0.16].
+ *
+ * conf.playing — boolean, whether the animation loop is running.
+ */
 class Gradient {
   constructor(...t) {
     e(this, "el", void 0),
@@ -496,11 +557,7 @@ class Gradient {
       e(this, "angle", 0),
       e(this, "isLoadedClass", !1),
       e(this, "isScrolling", !1),
-      /*e(this, "isStatic", o.disableAmbientAnimations()),*/ e(
-        this,
-        "scrollingTimeout",
-        void 0
-      ),
+      e(this, "scrollingTimeout", void 0),
       e(this, "scrollingRefreshDelay", 200),
       e(this, "isIntersecting", !1),
       e(this, "shaderFiles", void 0),
@@ -521,12 +578,55 @@ class Gradient {
       e(this, "geometry", void 0),
       e(this, "minigl", void 0),
       e(this, "scrollObserver", void 0),
+
+      // Wave amplitude in pixels — how tall the waves are.
+      // 0 = flat plane, 320 = default, ~600 = very dramatic.
       e(this, "amp", 320),
+
+      // Noise seed — changes the overall shape of the pattern.
+      // Any integer produces a different but consistent look.
       e(this, "seed", 5),
+
+      // Horizontal noise frequency — how many wave cycles appear across X.
+      // 0.00014 = default (sparse). Higher values = more chaotic.
       e(this, "freqX", 14e-5),
+
+      // Vertical noise frequency — same concept for the Y axis.
       e(this, "freqY", 29e-5),
+
+      // Step size applied by updateFrequency(delta). Nudges freqX and freqY.
       e(this, "freqDelta", 1e-5),
-      e(this, "activeColors", [1, 1, 1, 1]),
+
+      // 8-element array of active flags for each color slot (0 = hidden, 1 = visible).
+      // Slot 0 = base color, slots 1-7 = wave layer colors.
+      // Expand by setting CSS vars --gradient-color-5 through --gradient-color-8.
+      e(this, "activeColors", [1, 1, 1, 1, 0, 0, 0, 0]),
+
+      // Base noise speed used internally. Scale with setSpeed().
+      e(this, "_baseNoiseSpeed", 5e-6),
+
+      // Current speed multiplier. 1.0 = default, 2.0 = twice as fast.
+      e(this, "_speedMultiplier", 1),
+
+      // Palette cycling — set via setPalettes() and driven by startPaletteCycle().
+      // Each palette: { name: string, colors: string[] } (hex strings, 2–8 colors).
+      e(this, "palettes", []),
+      e(this, "_normPalettes", []),
+      e(this, "_paletteIndex", 0),
+      e(this, "_paletteCycling", false),
+      e(this, "_paletteTransitionMs", 6000),
+      e(this, "_paletteStartTime", null),
+      e(this, "_paletteAnimId", null),
+      // When true, picks a random next palette instead of advancing sequentially.
+      e(this, "_paletteShuffle", false),
+      // Pre-computed next palette index (set at transition start, respects shuffle).
+      e(this, "_nextPaletteIndex", undefined),
+      // Assign these to react to palette transitions:
+      //   onPaletteChange(newIndex)       — fires when the active palette advances
+      //   onPaletteProgress(t, fromIndex) — fires each frame during cross-fade (t: 0→1)
+      e(this, "onPaletteChange", null),
+      e(this, "onPaletteProgress", null),
+
       e(this, "isMetaKey", !1),
       e(this, "isGradientLegendVisible", !1),
       e(this, "isMouseDown", !1),
@@ -577,11 +677,11 @@ class Gradient {
         }
         if (0 !== this.last && this.isStatic)
           return this.minigl.render(), void this.disconnect();
-        /*this.isIntersecting && */ (this.conf.playing || this.isMouseDown) &&
+        (this.conf.playing || this.isMouseDown) &&
           requestAnimationFrame(this.animate);
       }),
       e(this, "addIsLoadedClass", () => {
-        /*this.isIntersecting && */ !this.isLoadedClass &&
+        !this.isLoadedClass &&
           ((this.isLoadedClass = !0),
           this.el.classList.add("isLoaded"),
           setTimeout(() => {
@@ -614,6 +714,9 @@ class Gradient {
       (this.conf = {
         presetName: "",
         wireframe: false,
+        // [xDensity, yDensity] — mesh segment density.
+        // Lower = faster rendering. Higher = smoother curves.
+        // e.g. [0.03, 0.08] for performance, [0.1, 0.25] for quality.
         density: [0.06, 0.16],
         zoom: 1,
         rotation: 0,
@@ -627,15 +730,6 @@ class Gradient {
               ((this.computedCanvasStyle = getComputedStyle(this.el)),
               this.waitForCssVars());
           }));
-    /*
-            this.scrollObserver = await s.create(.1, !1),
-            this.scrollObserver.observe(this.el),
-            this.scrollObserver.onSeparate(() => {
-                window.removeEventListener("scroll", this.handleScroll), window.removeEventListener("mousedown", this.handleMouseDown), window.removeEventListener("mouseup", this.handleMouseUp), window.removeEventListener("keydown", this.handleKeyDown), this.isIntersecting = !1, this.conf.playing && this.pause()
-            }), 
-            this.scrollObserver.onIntersect(() => {
-                window.addEventListener("scroll", this.handleScroll), window.addEventListener("mousedown", this.handleMouseDown), window.addEventListener("mouseup", this.handleMouseUp), window.addEventListener("keydown", this.handleKeyDown), this.isIntersecting = !0, this.addIsLoadedClass(), this.play()
-            })*/
   }
   disconnect() {
     this.scrollObserver &&
@@ -657,9 +751,12 @@ class Gradient {
       u_darken_top: new this.minigl.Uniform({
         value: "" === this.el.dataset.jsDarkenTop ? 1 : 0,
       }),
+      // u_active_colors is a float array of 8 slots (one per color).
+      // 1.0 = visible, 0.0 = hidden. Slot 0 = base color, 1-7 = wave layers.
+      // Uses float array instead of vec4 to support up to 8 colors.
       u_active_colors: new this.minigl.Uniform({
-        value: this.activeColors,
-        type: "vec4",
+        value: this.activeColors.map((v) => new this.minigl.Uniform({ value: v })),
+        type: "array",
       }),
       u_global: new this.minigl.Uniform({
         value: {
@@ -667,8 +764,9 @@ class Gradient {
             value: [this.freqX, this.freqY],
             type: "vec2",
           }),
+          // Controls animation speed in the shader. Scale with setSpeed().
           noiseSpeed: new this.minigl.Uniform({
-            value: 5e-6,
+            value: this._baseNoiseSpeed * this._speedMultiplier,
           }),
         },
         type: "struct",
@@ -688,6 +786,7 @@ class Gradient {
             value: [3, 4],
             type: "vec2",
           }),
+          // Wave amplitude — how tall the undulations are.
           noiseAmp: new this.minigl.Uniform({
             value: this.amp,
           }),
@@ -780,6 +879,10 @@ class Gradient {
   }
   toggleColor(index) {
     this.activeColors[index] = 0 === this.activeColors[index] ? 1 : 0;
+    // Also update the live uniform so the change takes effect immediately.
+    if (this.uniforms && this.uniforms.u_active_colors) {
+      this.uniforms.u_active_colors.value[index].value = this.activeColors[index];
+    }
   }
   showGradientLegend() {
     this.width > this.minWidth &&
@@ -815,7 +918,9 @@ class Gradient {
         ((this.cssVarRetries += 1), this.cssVarRetries > this.maxCssVarRetries)
       ) {
         return (
-          (this.sectionColors = [16711680, 16711680, 16711935, 65280, 255]),
+          (this.sectionColors = [16711680, 16711680, 16711935, 65280, 255].map(
+            normalizeColor
+          )),
           void this.init()
         );
       }
@@ -823,7 +928,9 @@ class Gradient {
     }
   }
   /*
-   * Initializes the four section colors by retrieving them from css variables.
+   * Initializes gradient colors from CSS variables.
+   * Reads --gradient-color-1 through --gradient-color-8.
+   * Colors not defined in CSS are skipped (the array may be shorter than 8).
    */
   initGradientColors() {
     this.sectionColors = [
@@ -831,11 +938,16 @@ class Gradient {
       "--gradient-color-2",
       "--gradient-color-3",
       "--gradient-color-4",
+      "--gradient-color-5",
+      "--gradient-color-6",
+      "--gradient-color-7",
+      "--gradient-color-8",
     ]
       .map((cssPropertyName) => {
         let hex = this.computedCanvasStyle
           .getPropertyValue(cssPropertyName)
           .trim();
+        if (!hex) return null;
         //Check if shorthand hex value was used and double the length so the conversion in normalizeColor will work.
         if (4 === hex.length) {
           const hexTemp = hex
@@ -849,23 +961,298 @@ class Gradient {
       })
       .filter(Boolean)
       .map(normalizeColor);
+
+    // Sync activeColors slots to match the number of loaded colors.
+    this._syncActiveColors();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
+
+  /*
+   * Keeps activeColors in sync with sectionColors.
+   * Slots 0..sectionColors.length-1 are set to 1 (active).
+   * Remaining slots up to 8 are set to 0 (inactive).
+   */
+  _syncActiveColors() {
+    for (let i = 0; i < 8; i++) {
+      this.activeColors[i] = i < this.sectionColors.length ? 1 : 0;
+    }
+  }
+
+  /*
+   * Removes the current mesh from the scene and rebuilds it from sectionColors.
+   * Call this after adding or removing colors.
+   */
+  _rebuildMesh() {
+    if (this.mesh) this.mesh.remove();
+    this._syncActiveColors();
+    this.initMesh();
+    this.resize();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API
+  // ---------------------------------------------------------------------------
+
+  /*
+   * Set a color by index using a CSS hex string (e.g. "#ff6b6b").
+   * Index 0 = base color, 1-7 = wave layers.
+   * For existing colors only — use addColor() to add a new slot.
+   */
+  setColor(index, hexString) {
+    const hex = hexString.replace("#", "");
+    const normalized = normalizeColor(parseInt(`0x${hex}`, 16));
+    this.sectionColors[index] = normalized;
+    if (!this.uniforms) return;
+    if (index === 0) {
+      this.uniforms.u_baseColor.value = normalized;
+    } else {
+      const layer = this.uniforms.u_waveLayers.value[index - 1];
+      if (layer) layer.value.color.value = normalized;
+    }
+  }
+
+  /*
+   * Set animation speed as a multiplier of the default.
+   *   1.0 = default speed
+   *   2.0 = twice as fast
+   *   0.5 = half speed
+   *   0.0 = frozen (same as pause but time still advances)
+   */
+  setSpeed(multiplier) {
+    this._speedMultiplier = multiplier;
+    if (this.uniforms) {
+      this.uniforms.u_global.value.noiseSpeed.value =
+        this._baseNoiseSpeed * multiplier;
+    }
+  }
+
+  /*
+   * Set the wave amplitude (how tall the undulations are).
+   *   0   = completely flat
+   *   320 = default
+   *   600 = very dramatic
+   */
+  setAmplitude(value) {
+    this.amp = value;
+    if (this.uniforms) {
+      this.uniforms.u_vertDeform.value.noiseAmp.value = value;
+    }
+  }
+
+  /*
+   * Set noise frequency on both axes.
+   * Higher values = more wave cycles = more chaotic appearance.
+   *   x default: 0.00014
+   *   y default: 0.00029
+   */
+  setFrequency(x, y) {
+    this.freqX = x;
+    this.freqY = y;
+    if (this.uniforms) {
+      this.uniforms.u_global.value.noiseFreq.value = [x, y];
+    }
+  }
+
+  /*
+   * Add a new color layer (up to 8 total).
+   * Accepts a CSS hex string: "#rrggbb" or "#rgb".
+   * Returns false if already at the 8-color limit.
+   */
+  addColor(hexString) {
+    if (this.sectionColors.length >= 8) {
+      console.warn("Whatagradient: maximum of 8 colors reached.");
+      return false;
+    }
+    const hex = hexString.replace("#", "");
+    const normalized = normalizeColor(parseInt(`0x${hex}`, 16));
+    this.sectionColors.push(normalized);
+    this._rebuildMesh();
+    return true;
+  }
+
+  /*
+   * Remove a color by index (0 = base color, 1-7 = wave layers).
+   * At least 1 color must remain.
+   * Returns false if removal is not possible.
+   */
+  removeColor(index) {
+    if (this.sectionColors.length <= 1) {
+      console.warn("Whatagradient: at least 1 color is required.");
+      return false;
+    }
+    if (index < 0 || index >= this.sectionColors.length) {
+      console.warn(`Whatagradient: color index ${index} out of range.`);
+      return false;
+    }
+    this.sectionColors.splice(index, 1);
+    this._rebuildMesh();
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Palette cycling
+  // ---------------------------------------------------------------------------
+
+  /*
+   * Internal: linearly interpolate two normalized [r,g,b] arrays.
+   */
+  _lerpColor(a, b, t) {
+    return [
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t,
+      a[2] + (b[2] - a[2]) * t,
+    ];
+  }
+
+  /*
+   * Internal: push an array of normalized colors directly to the live uniforms
+   * without touching sectionColors. Used for smooth palette cross-fades.
+   */
+  _applyColors(normalizedColors) {
+    if (!this.uniforms) return;
+    normalizedColors.forEach((color, i) => {
+      if (i === 0) {
+        this.uniforms.u_baseColor.value = color;
+      } else {
+        const layer = this.uniforms.u_waveLayers.value[i - 1];
+        if (layer) layer.value.color.value = color;
+      }
+    });
+  }
+
+  /*
+   * Internal: rAF loop that drives the palette cross-fade.
+   * Handles palettes of different lengths by padding the shorter one with its
+   * last color, preventing "Cannot read properties of undefined" errors.
+   */
+  _paletteTick(ts) {
+    if (!this._paletteCycling) return;
+    if (this._paletteStartTime === null) this._paletteStartTime = ts;
+    const elapsed = ts - this._paletteStartTime;
+    const t = Math.min(elapsed / this._paletteTransitionMs, 1);
+
+    const from = this._normPalettes[this._paletteIndex];
+    const toIndex = this._nextPaletteIndex !== undefined
+      ? this._nextPaletteIndex
+      : (this._paletteIndex + 1) % this._normPalettes.length;
+    const to = this._normPalettes[toIndex];
+
+    // Lerp across the longer palette; pad the shorter one with its last color.
+    const count = Math.max(from.length, to.length);
+    const blended = Array.from({ length: count }, (_, i) => {
+      const fc = from[i] ?? from[from.length - 1];
+      const tc = to[i]   ?? to[to.length - 1];
+      return this._lerpColor(fc, tc, t);
+    });
+    this._applyColors(blended);
+
+    if (this.onPaletteProgress) this.onPaletteProgress(t, this._paletteIndex);
+
+    if (t >= 1) {
+      this._paletteIndex = toIndex;
+      this._nextPaletteIndex = this._pickNext(this._paletteIndex);
+      this._paletteStartTime = null;
+      if (this.onPaletteChange) this.onPaletteChange(this._paletteIndex);
+    }
+
+    this._paletteAnimId = requestAnimationFrame((ts) => this._paletteTick(ts));
+  }
+
+  /*
+   * Internal: choose the next palette index based on shuffle mode.
+   */
+  _pickNext(currentIndex) {
+    if (!this._paletteShuffle || this.palettes.length <= 2) {
+      return (currentIndex + 1) % this.palettes.length;
+    }
+    let next;
+    do { next = Math.floor(Math.random() * this.palettes.length); }
+    while (next === currentIndex);
+    return next;
+  }
+
+  /*
+   * Set the list of palettes for cycling.
+   * Each entry: { name: string, colors: string[] } — hex strings, 2–8 colors each.
+   * Must be called before startPaletteCycle().
+   */
+  setPalettes(palettes) {
+    this.palettes = palettes;
+    this._normPalettes = palettes.map((p) =>
+      p.colors.map((hex) => {
+        const h = hex.replace("#", "");
+        return normalizeColor(parseInt(`0x${h}`, 16));
+      })
+    );
+  }
+
+  /*
+   * Start auto-cycling through palettes with a smooth cross-fade.
+   *   transitionMs — duration of each cross-fade in ms (default: 6000)
+   * Requires at least 2 palettes set via setPalettes().
+   */
+  startPaletteCycle(transitionMs = 6000) {
+    if (this.palettes.length < 2) {
+      console.warn("Whatagradient: need at least 2 palettes to cycle.");
+      return;
+    }
+    this._paletteTransitionMs = transitionMs;
+    this._paletteCycling = true;
+    this._paletteStartTime = null;
+    this._nextPaletteIndex = this._pickNext(this._paletteIndex);
+    this._paletteAnimId = requestAnimationFrame((ts) => this._paletteTick(ts));
+  }
+
+  /*
+   * Stop palette auto-cycling. Colors remain at their current blended state.
+   */
+  stopPaletteCycle() {
+    this._paletteCycling = false;
+    if (this._paletteAnimId) {
+      cancelAnimationFrame(this._paletteAnimId);
+      this._paletteAnimId = null;
+    }
+  }
+
+  /*
+   * Jump immediately to a palette by index (snaps colors, no cross-fade).
+   * Also resets the cycle timer so the next transition starts fresh from here.
+   */
+  jumpToPalette(index) {
+    if (index < 0 || index >= this.palettes.length) return;
+    this._paletteIndex = index;
+    this._nextPaletteIndex = this._pickNext(index);
+    this._paletteStartTime = null;
+    if (this._normPalettes[index]) this._applyColors(this._normPalettes[index]);
+    if (this.onPaletteChange) this.onPaletteChange(index);
+  }
+
+  /*
+   * Enable or disable shuffle mode for palette cycling.
+   *   true  — each transition picks a random (non-repeating) next palette
+   *   false — palettes advance in order (default)
+   */
+  setPaletteShuffle(enabled) {
+    this._paletteShuffle = enabled;
+    // Re-pick next so the change takes effect before the current transition ends.
+    this._nextPaletteIndex = this._pickNext(this._paletteIndex);
   }
 }
 
 /*
- *Finally initializing the Gradient class, assigning a canvas to it and calling Gradient.connect() which initializes everything,
- * Use Gradient.pause() and Gradient.play() for controls.
+ * Usage:
+ *   const gradient = new Gradient();
+ *   gradient.initGradient('#gradient-canvas');
  *
- * Here are some default property values you can change anytime:
- * Amplitude:    Gradient.amp = 0
- * Colors:       Gradient.sectionColors (if you change colors, use normalizeColor(#hexValue)) before you assign it.
- *
- *
- * Useful functions
- * Gradient.toggleColor(index)
- * Gradient.updateFrequency(freq)
+ * Console commands (see readme.md for the full list):
+ *   gradient.setSpeed(2)          // double speed
+ *   gradient.setAmplitude(100)    // subtle waves
+ *   gradient.setColor(0, '#ff0000') // change base color
+ *   gradient.addColor('#00ff00')  // add a 5th color
+ *   gradient.pause() / gradient.play()
  */
-// var gradient = new Gradient();
-// gradient.initGradient("#gradient-canvas");
 
-export { Gradient };
+export { Gradient, normalizeColor, normalizedToHex };
