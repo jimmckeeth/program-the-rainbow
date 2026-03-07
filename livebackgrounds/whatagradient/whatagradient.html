@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Whatagradient</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      /*
+     * Color configuration via CSS custom properties.
+     * Define 1–8 colors using --gradient-color-1 through --gradient-color-8.
+     * Undefined slots are ignored. Supports full (#rrggbb) and shorthand (#rgb) hex.
+     */
+      #gradient-canvas {
+        width: 100%;
+        height: 100%;
+
+        /* Base color (slot 0) */
+        --gradient-color-1: #c3e4ff;
+        /* Wave layer colors (slots 1–3) */
+        --gradient-color-2: #6ec3f4;
+        --gradient-color-3: #eae2ff;
+        --gradient-color-4: #b9beff;
+        /* Add up to 4 more colors by uncommenting and editing below: */
+        --gradient-color-5: #ffb3c1; 
+        --gradient-color-6: #ffd6a5;
+        --gradient-color-7: #caffbf;
+        --gradient-color-8: #9bf6ff;
+      }
+
+    /* -----------------------------------------------------------------------------
+       Controls panel
+      ----------------------------------------------------------------------------- */
+      #controls-toggle {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: #fff;
+        font-size: 18px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        user-select: none;
+        backdrop-filter: blur(4px);
+      }
+      #controls-toggle:hover {
+        background: rgba(0, 0, 0, 0.65);
+      }
+
+      #controls-panel {
+        position: fixed;
+        bottom: 60px;
+        right: 16px;
+        width: 260px;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        padding: 14px 16px;
+        color: #fff;
+        font-family: system-ui, sans-serif;
+        font-size: 13px;
+        z-index: 100;
+        display: none;
+      }
+      #controls-panel.open {
+        display: block;
+      }
+
+      #controls-panel h3 {
+        margin: 0 0 12px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.6;
+        font-weight: 600;
+      }
+      .ctrl-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        gap: 8px;
+      }
+      .ctrl-row label {
+        flex: 0 0 80px;
+        opacity: 0.85;
+      }
+      .ctrl-row input[type="range"] {
+        flex: 1;
+        accent-color: #a0c4ff;
+      }
+      .ctrl-row .val {
+        flex: 0 0 36px;
+        text-align: right;
+        opacity: 0.7;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ctrl-sep {
+        border: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        margin: 12px 0;
+      }
+
+      #color-list {
+        margin-bottom: 8px;
+      }
+      .color-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .color-row input[type="checkbox"] {
+        accent-color: #a0c4ff;
+      }
+      .color-row label {
+        flex: 1;
+        opacity: 0.85;
+      }
+      .color-row input[type="color"] {
+        width: 32px;
+        height: 24px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        padding: 0;
+        background: none;
+      }
+      .color-row .remove-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.45);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0 2px;
+        line-height: 1;
+      }
+      .color-row .remove-btn:hover {
+        color: #ff8080;
+      }
+
+      #btn-add-color {
+        width: 100%;
+        padding: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        color: #fff;
+        cursor: pointer;
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      #btn-add-color:hover {
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      #btn-playpause {
+        width: 100%;
+        padding: 7px;
+        background: rgba(160, 196, 255, 0.18);
+        border: 1px solid rgba(160, 196, 255, 0.3);
+        border-radius: 6px;
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        margin-top: 4px;
+      }
+      #btn-playpause:hover {
+        background: rgba(160, 196, 255, 0.28);
+      }
+
+ /* ----------------------------------------------------------------------------
+       Palette strip (bottom-center)
+    --------------------------------------------------------------------------- */
+      #palette-strip {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        z-index: 99;
+        font-family: system-ui, sans-serif;
+      }
+      #palette-btns {
+        display: flex;
+        gap: 8px;
+      }
+      .palette-btn {
+        display: flex;
+        gap: 3px;
+        padding: 5px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(6px);
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition:
+          border-color 0.3s,
+          transform 0.2s;
+      }
+      .palette-btn:hover {
+        background: rgba(255, 255, 255, 0.25);
+      }
+      .palette-btn.active {
+        border-color: rgba(255, 255, 255, 0.85);
+        transform: scale(1.1);
+      }
+      .swatch {
+        width: 12px;
+        height: 26px;
+        border-radius: 4px;
+      }
+      #palette-progress-wrap {
+        width: 180px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      #palette-progress {
+        height: 100%;
+        width: 0%;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 2px;
+      }
+      #palette-label {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gradient-canvas" data-transition-in></canvas>
+
+    <!-- Gear icon to toggle the controls panel -->
+    <button id="controls-toggle" title="Toggle controls">&#9881;</button>
+
+    <!-- Palette strip (bottom-center, shown when palettes are loaded) -->
+    <div id="palette-strip" style="display: none">
+      <div id="palette-btns"></div>
+      <div id="palette-progress-wrap"><div id="palette-progress"></div></div>
+      <div id="palette-label"></div>
+    </div>
+
+    <!-- Controls panel -->
+    <div id="controls-panel">
+      <h3>Gradient Controls</h3>
+
+      <!-- Speed: scales the noiseSpeed uniform (1.0 = default) -->
+      <div class="ctrl-row">
+        <label>Speed</label>
+        <input
+          type="range"
+          id="ctrl-speed"
+          min="0.1"
+          max="4"
+          step="0.05"
+          value="1"
+        />
+        <span class="val" id="val-speed">1.0x</span>
+      </div>
+
+      <!-- Amplitude: how tall the waves are (0 = flat, 320 = default, 600 = dramatic) -->
+      <div class="ctrl-row">
+        <label>Amplitude</label>
+        <input
+          type="range"
+          id="ctrl-amp"
+          min="0"
+          max="600"
+          step="5"
+          value="320"
+        />
+        <span class="val" id="val-amp">320</span>
+      </div>
+
+      <!-- Frequency: noise frequency on both axes (higher = more chaotic) -->
+      <div class="ctrl-row">
+        <label>Frequency</label>
+        <input
+          type="range"
+          id="ctrl-freq"
+          min="0.5"
+          max="5"
+          step="0.1"
+          value="1"
+        />
+        <span class="val" id="val-freq">1.0x</span>
+      </div>
+
+      <hr class="ctrl-sep" />
+
+      <!-- Palette cycle controls -->
+      <h3>Palette Cycle</h3>
+
+      <!-- Cycle duration: how long each palette cross-fade takes -->
+      <div class="ctrl-row">
+        <label>Duration</label>
+        <input
+          type="range"
+          id="ctrl-cycle"
+          min="1"
+          max="30"
+          step="0.5"
+          value="6"
+        />
+        <span class="val" id="val-cycle">6s</span>
+      </div>
+      <div class="ctrl-row">
+        <label></label>
+        <button
+          id="btn-cycle"
+          style="
+            flex: 1;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+          "
+        >
+          Stop Cycle
+        </button>
+      </div>
+
+      <!-- Shuffle: randomize palette order instead of cycling sequentially -->
+      <div class="ctrl-row">
+        <label>Shuffle</label>
+        <input type="checkbox" id="chk-shuffle" style="accent-color:#a0c4ff;width:16px;height:16px;cursor:pointer" />
+        <span class="val" style="flex:1"></span>
+      </div>
+
+      <hr class="ctrl-sep" />
+
+      <!-- Color list (dynamically generated) -->
+      <div id="color-list"></div>
+      <button id="btn-add-color">+ Add Color</button>
+
+      <hr class="ctrl-sep" />
+
+      <button id="btn-playpause">Pause</button>
+    </div>
+
+    <script type="module">
+      // Use local whatagradient.js instead of the CDN version.
+      // Run `node serve.js` and open http://localhost:3000/whatagradient.html
+      import { Gradient, normalizedToHex } from "./whatagradient.js";
+
+      // ---------------------------------------------------------------------------
+      // UI visibility — flip these to hide elements for a clean background-only view.
+      // Toggle at runtime in the browser console:
+      //   ui.togglePalette()   — show/hide the bottom palette strip
+      //   ui.toggleGear()      — show/hide the gear / controls button
+      // ---------------------------------------------------------------------------
+      const SHOW_PALETTE_STRIP = true; // bottom-center palette swatch bar & progress
+      const SHOW_CONTROLS_GEAR = true; // bottom-right gear button (and its panel)
+
+      // Apply initial visibility
+      if (!SHOW_CONTROLS_GEAR)
+        document.getElementById("controls-toggle").style.display = "none";
+
+      // Expose toggle/show/hide helpers on window so they're accessible from the console.
+      window.ui = {
+        // Palette strip
+        showPalette() { document.getElementById("palette-strip").style.display = "flex"; },
+        hidePalette() { document.getElementById("palette-strip").style.display = "none"; },
+        togglePalette() {
+          const el = document.getElementById("palette-strip");
+          el.style.display = el.style.display === "none" ? "flex" : "none";
+        },
+        // Palette shuffle
+        shuffleOn()  { gradient.setPaletteShuffle(true);  document.getElementById("chk-shuffle").checked = true; },
+        shuffleOff() { gradient.setPaletteShuffle(false); document.getElementById("chk-shuffle").checked = false; },
+        // Gear button (hiding it also closes the controls panel)
+        showGear() { document.getElementById("controls-toggle").style.display = "flex"; },
+        hideGear() {
+          document.getElementById("controls-toggle").style.display = "none";
+          document.getElementById("controls-panel").classList.remove("open");
+        },
+        toggleGear() {
+          const el = document.getElementById("controls-toggle");
+          el.style.display = el.style.display === "none" ? "flex" : "none";
+          if (el.style.display === "none")
+            document.getElementById("controls-panel").classList.remove("open");
+        },
+      };
+
+      // ---------------------------------------------------------------------------
+      // Palette definitions — edit, add, or remove entries freely.
+      // Each entry: { name: string, colors: string[] } (2–8 hex colors).
+      // ---------------------------------------------------------------------------
+      const PALETTES = [
+        { 
+            name:    "Sky", 
+            colors: ["#c3e4ff", "#6ec3f4", "#eae2ff", "#b9beff"] 
+        },
+        {
+            // Deep ocean floor up to sunlit surface — 8 blues & teals
+            name:    "Ocean",
+            colors: ["Navy",    "#023e8a", "#0077b6", "#0096c7",
+                     "#00b4d8", "#48cae4", "#90e0ef", "skyblue"],
+        },
+        {
+            name:    "Sunset", 
+            colors: ["#ffb7b2", "#ff9a9e", "#ffdac1", "#fad0c4"],
+        },
+        {
+            name:    "Forest",
+            colors: ["#b7f8db", "#50a7c2", "#a8edea", "#8ec5fc"],
+        },
+        {
+            name:    "Lavender",
+            colors: ["#e0c3fc", "#8ec5fc", "#d4b8e0", "#c3cfe2"],
+        },
+        { 
+            name:    "Ember", 
+            colors: ["#f7971e", "#ffd200", "#fcb045", "#ffccba"] 
+        },
+        {
+            name:    "Twilight",
+            colors: ["#a18cd1", "#fbc2eb", "#a1c4fd", "#c2e9fb"],
+        },
+        {
+            // Forest floor to sunlit canopy — 8 greens
+            name:    "Meadow",
+            colors: ["#1b4332", "#2d6a4f", "#40916c", "#52b788",
+                     "#74c69d", "#95d5b2", "#b7e4c7", "#d8f3dc"],
+        },
+      ];
+
+      // ---------------------------------------------------------------------------
+      // Initialize gradient
+      // ---------------------------------------------------------------------------
+      const gradient = new Gradient();
+      window.gradient = gradient; // expose to browser console for live tweaking
+      gradient.setPalettes(PALETTES);
+      gradient.initGradient("#gradient-canvas");
+
+      // Default freq values stored for the multiplier slider
+      const BASE_FREQ_X = 14e-5;
+      const BASE_FREQ_Y = 29e-5;
+
+      // ---------------------------------------------------------------------------
+      // Controls panel toggle
+      // ---------------------------------------------------------------------------
+      const panel = document.getElementById("controls-panel");
+      const toggle = document.getElementById("controls-toggle");
+      toggle.addEventListener("click", () => panel.classList.toggle("open"));
+
+      // ---------------------------------------------------------------------------
+      // Sliders
+      // ---------------------------------------------------------------------------
+      const speedSlider = document.getElementById("ctrl-speed");
+      const ampSlider = document.getElementById("ctrl-amp");
+      const freqSlider = document.getElementById("ctrl-freq");
+
+      speedSlider.addEventListener("input", () => {
+        const v = parseFloat(speedSlider.value);
+        gradient.setSpeed(v);
+        document.getElementById("val-speed").textContent = v.toFixed(2) + "x";
+      });
+
+      ampSlider.addEventListener("input", () => {
+        const v = parseInt(ampSlider.value, 10);
+        gradient.setAmplitude(v);
+        document.getElementById("val-amp").textContent = v;
+      });
+
+      freqSlider.addEventListener("input", () => {
+        const mult = parseFloat(freqSlider.value);
+        gradient.setFrequency(BASE_FREQ_X * mult, BASE_FREQ_Y * mult);
+        document.getElementById("val-freq").textContent = mult.toFixed(1) + "x";
+      });
+
+      // ---------------------------------------------------------------------------
+      // Color list — rebuilt whenever colors change
+      // ---------------------------------------------------------------------------
+      function buildColorList() {
+        const list = document.getElementById("color-list");
+        list.innerHTML = "";
+        if (!gradient.sectionColors) return;
+
+        gradient.sectionColors.forEach((normalized, i) => {
+          const hex = normalizedToHex(normalized);
+          const label = i === 0 ? "Base" : `Layer ${i}`;
+
+          const row = document.createElement("div");
+          row.className = "color-row";
+
+          // Active toggle checkbox
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = gradient.activeColors[i] === 1;
+          cb.addEventListener("change", () => gradient.toggleColor(i));
+
+          // Label
+          const lbl = document.createElement("label");
+          lbl.textContent = label;
+
+          // Color picker
+          const picker = document.createElement("input");
+          picker.type = "color";
+          picker.value = hex;
+          picker.addEventListener("input", () => {
+            gradient.setColor(i, picker.value);
+          });
+
+          // Remove button (hidden for the base color if only 1 color remains)
+          const rm = document.createElement("button");
+          rm.className = "remove-btn";
+          rm.textContent = "\u00d7";
+          rm.title = "Remove this color";
+          rm.addEventListener("click", () => {
+            if (gradient.removeColor(i)) buildColorList();
+          });
+
+          row.append(cb, lbl, picker, rm);
+          list.appendChild(row);
+        });
+
+        // Hide add button when at the 8-color limit
+        document.getElementById("btn-add-color").style.display =
+          gradient.sectionColors.length >= 8 ? "none" : "block";
+      }
+
+      // Rebuild the list once the gradient has initialized its colors.
+      // waitForCssVars() resolves asynchronously, so we poll briefly.
+      const colorPollId = setInterval(() => {
+        if (gradient.sectionColors) {
+          buildColorList();
+          buildPaletteUI();
+          gradient.startPaletteCycle(6000);
+          clearInterval(colorPollId);
+        }
+      }, 50);
+
+      // Add color button — appends a random pastel and rebuilds the list
+      document.getElementById("btn-add-color").addEventListener("click", () => {
+        // Default new color: a random pastel
+        const h = Math.floor(Math.random() * 360);
+        const newHex = hslToHex(h, 70, 80);
+        const added = gradient.addColor(newHex);
+        if (added) buildColorList();
+      });
+
+      // ---------------------------------------------------------------------------
+      // Play / pause
+      // ---------------------------------------------------------------------------
+      const playBtn = document.getElementById("btn-playpause");
+      playBtn.addEventListener("click", () => {
+        if (gradient.conf.playing) {
+          gradient.pause();
+          playBtn.textContent = "Play";
+        } else {
+          gradient.play();
+          playBtn.textContent = "Pause";
+        }
+      });
+
+      // ---------------------------------------------------------------------------
+      // Cycle duration slider
+      // ---------------------------------------------------------------------------
+      const cycleSlider = document.getElementById("ctrl-cycle");
+      cycleSlider.addEventListener("input", () => {
+        const s = parseFloat(cycleSlider.value);
+        document.getElementById("val-cycle").textContent = s + "s";
+        gradient._paletteTransitionMs = s * 1000;
+        gradient._paletteStartTime = null; // restart current transition timing
+      });
+
+      // Shuffle checkbox
+      const shuffleChk = document.getElementById("chk-shuffle");
+      shuffleChk.addEventListener("change", () => {
+        gradient.setPaletteShuffle(shuffleChk.checked);
+      });
+
+      // Cycle start/stop toggle
+      const cycleBtn = document.getElementById("btn-cycle");
+      cycleBtn.addEventListener("click", () => {
+        if (gradient._paletteCycling) {
+          gradient.stopPaletteCycle();
+          cycleBtn.textContent = "Start Cycle";
+        } else {
+          gradient.startPaletteCycle(parseFloat(cycleSlider.value) * 1000);
+          cycleBtn.textContent = "Stop Cycle";
+        }
+      });
+
+      // ---------------------------------------------------------------------------
+      // Palette strip UI
+      // ---------------------------------------------------------------------------
+      function buildPaletteUI() {
+        const strip = document.getElementById("palette-strip");
+        const btnsEl = document.getElementById("palette-btns");
+        const progress = document.getElementById("palette-progress");
+        const label = document.getElementById("palette-label");
+
+        // Build swatch buttons
+        btnsEl.innerHTML = "";
+        const btns = PALETTES.map((p, i) => {
+          const btn = document.createElement("div");
+          btn.className = "palette-btn" + (i === 0 ? " active" : "");
+          btn.title = p.name;
+          p.colors.forEach((hex) => {
+            const s = document.createElement("div");
+            s.className = "swatch";
+            s.style.background = hex;
+            btn.appendChild(s);
+          });
+          btn.addEventListener("click", () => gradient.jumpToPalette(i));
+          btnsEl.appendChild(btn);
+          return btn;
+        });
+
+        function updateLabel(idx) {
+          const next = (idx + 1) % PALETTES.length;
+          label.textContent =
+            PALETTES[idx].name + " \u2192 " + PALETTES[next].name;
+          btns.forEach((b, j) => b.classList.toggle("active", j === idx));
+        }
+        updateLabel(0);
+
+        // Wire up gradient callbacks
+        gradient.onPaletteChange = (idx) => updateLabel(idx);
+        gradient.onPaletteProgress = (t) => {
+          progress.style.width = t * 100 + "%";
+        };
+
+        if (SHOW_PALETTE_STRIP) strip.style.display = "flex";
+      }
+
+      // ---------------------------------------------------------------------------
+      // Helper: HSL to hex
+      // ---------------------------------------------------------------------------
+      function hslToHex(h, s, l) {
+        s /= 100;
+        l /= 100;
+        const a = s * Math.min(l, 1 - l);
+        const f = (n) => {
+          const k = (n + h / 30) % 12;
+          const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+          return Math.round(255 * color)
+            .toString(16)
+            .padStart(2, "0");
+        };
+        return `#${f(0)}${f(8)}${f(4)}`;
+      }
+    </script>
+  </body>
+</html>
