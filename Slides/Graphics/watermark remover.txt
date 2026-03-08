@@ -1,0 +1,3 @@
+https://github.com/allenk/GeminiWatermarkTool
+
+https://github.com/GargantuaX/gemini-watermark-remover
