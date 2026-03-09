@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGB, HSV, HSL Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range] {
+            accent-color: #4f46e5;
+        }
+        .color-preview {
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl border border-slate-200">
+        <h1 class="text-2xl font-bold text-slate-800 mb-6 text-center">RGB, HSL, & HSV Converter</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Left Column: Visuals & Hex -->
+            <div class="space-y-6">
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-slate-600">Color Preview & Picker</label>
+                    <div id="colorDisplay" class="w-full h-32 rounded-lg border border-slate-300 transition-colors duration-150 cursor-pointer relative overflow-hidden">
+                        <input type="color" id="hexInput" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="hexText" class="block text-sm font-semibold text-slate-600">Hex Code</label>
+                    <input type="text" id="hexText" placeholder="#FFFFFF" 
+                        class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-lg">
+                </div>
+            </div>
+
+            <!-- Right Column: RGB Sliders -->
+            <div class="space-y-4">
+                <div class="flex items-baseline justify-between border-b pb-1">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">RGB Model</h2>
+                    <span class="text-[10px] font-bold text-slate-300 uppercase">Hex Label / Dec Input</span>
+                </div>
+                
+                <!-- Red -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Red</label>
+                        <span id="rValText" class="font-mono text-indigo-600 font-bold">FF</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="rSlider" min="0" max="255" value="127" class="flex-grow">
+                        <input type="number" id="rNum" min="0" max="255" value="127" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+
+                <!-- Green -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Green</label>
+                        <span id="gValText" class="font-mono text-indigo-600 font-bold">FF</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="gSlider" min="0" max="255" value="0" class="flex-grow">
+                        <input type="number" id="gNum" min="0" max="255" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+
+                <!-- Blue -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Blue</label>
+                        <span id="bValText" class="font-mono text-indigo-600 font-bold">FF</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="bSlider" min="0" max="255" value="127" class="flex-grow">
+                        <input type="number" id="bNum" min="0" max="255" value="127" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HSV & HSL Section -->
+        <div class="mt-8 pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-8">
+            
+            <!-- HSV Section -->
+            <div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">HSV Model</h2>
+                <div class="space-y-4">
+                    <!-- Hue (HSV) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium text-slate-500">
+                            <label>Hue</label>
+                            <span id="hsv_hValText">0°</span>
+                        </div>
+                        <div class="flex gap-3">
+                            <input type="range" id="hsv_hSlider" min="0" max="360" value="0" class="flex-grow">
+                            <input type="number" id="hsv_hNum" min="0" max="360" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                        </div>
+                    </div>
+                    <!-- Saturation (HSV) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium text-slate-500">
+                            <label>Saturation</label>
+                            <span id="hsv_sValText">0%</span>
+                        </div>
+                        <div class="flex gap-3">
+                            <input type="range" id="hsv_sSlider" min="0" max="100" value="0" class="flex-grow">
+                            <input type="number" id="hsv_sNum" min="0" max="100" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                        </div>
+                    </div>
+                    <!-- Value (HSV) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium text-slate-500">
+                            <label>Value</label>
+                            <span id="hsv_vValText">0%</span>
+                        </div>
+                        <div class="flex gap-3">
+                            <input type="range" id="hsv_vSlider" min="0" max="100" value="0" class="flex-grow">
+                            <input type="number" id="hsv_vNum" min="0" max="100" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HSL Section -->
+            <div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">HSL Model</h2>
+                <div class="space-y-4">
+                    <!-- Hue (HSL) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium text-slate-500">
+                            <label>Hue</label>
+                            <span id="hsl_hValText">0°</span>
+                        </div>
+                        <div class="flex gap-3">
+                            <input type="range" id="hsl_hSlider" min="0" max="360" value="0" class="flex-grow">
+                            <input type="number" id="hsl_hNum" min="0" max="360" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                        </div>
+                    </div>
+                    <!-- Saturation (HSL) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium text-slate-500">
+                            <label>Saturation</label>
+                            <span id="hsl_sValText">0%</span>
+                        </div>
+                        <div class="flex gap-3">
+                            <input type="range" id="hsl_sSlider" min="0" max="100" value="0" class="flex-grow">
+                            <input type="number" id="hsl_sNum" min="0" max="100" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                        </div>
+                    </div>
+                    <!-- Lightness (HSL) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium text-slate-500">
+                            <label>Lightness</label>
+                            <span id="hsl_lValText">0%</span>
+                        </div>
+                        <div class="flex gap-3">
+                            <input type="range" id="hsl_lSlider" min="0" max="100" value="0" class="flex-grow">
+                            <input type="number" id="hsl_lNum" min="0" max="100" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const el = (id) => document.getElementById(id);
+        
+        const controls = {
+            r: { slider: el('rSlider'), num: el('rNum'), txt: el('rValText') },
+            g: { slider: el('gSlider'), num: el('gNum'), txt: el('gValText') },
+            b: { slider: el('bSlider'), num: el('bNum'), txt: el('bValText') },
+            hsv_h: { slider: el('hsv_hSlider'), num: el('hsv_hNum'), txt: el('hsv_hValText') },
+            hsv_s: { slider: el('hsv_sSlider'), num: el('hsv_sNum'), txt: el('hsv_sValText') },
+            hsv_v: { slider: el('hsv_vSlider'), num: el('hsv_vNum'), txt: el('hsv_vValText') },
+            hsl_h: { slider: el('hsl_hSlider'), num: el('hsl_hNum'), txt: el('hsl_hValText') },
+            hsl_s: { slider: el('hsl_sSlider'), num: el('hsl_sNum'), txt: el('hsl_sValText') },
+            hsl_l: { slider: el('hsl_lSlider'), num: el('hsl_lNum'), txt: el('hsl_lValText') },
+            hex: el('hexInput'),
+            hexText: el('hexText'),
+            display: el('colorDisplay')
+        };
+
+        // Utility: Single channel to Hex
+        function componentToHex(c) {
+            var hex = parseInt(c).toString(16).toUpperCase();
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+
+        // Utility: RGB to HSV
+        function rgbToHsv(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, v = max;
+            let d = max - min;
+            s = max === 0 ? 0 : d / max;
+
+            if (max === min) {
+                h = 0; // achromatic
+            } else {
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h: Math.round(h * 360), s: Math.round(s * 100), v: Math.round(v * 100) };
+        }
+
+        // Utility: HSV to RGB
+        function hsvToRgb(h, s, v) {
+            h /= 360; s /= 100; v /= 100;
+            let r, g, b;
+            let i = Math.floor(h * 6);
+            let f = h * 6 - i;
+            let p = v * (1 - s);
+            let q = v * (1 - f * s);
+            let t = v * (1 - (1 - f) * s);
+
+            switch (i % 6) {
+                case 0: r = v, g = t, b = p; break;
+                case 1: r = q, g = v, b = p; break;
+                case 2: r = p, g = v, b = t; break;
+                case 3: r = p, g = q, b = v; break;
+                case 4: r = t, g = p, b = v; break;
+                case 5: r = v, g = p, b = q; break;
+            }
+            return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+        }
+
+        // Utility: RGB to HSL
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0; // achromatic
+            } else {
+                let d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+        }
+
+        // Utility: HSL to RGB
+        function hslToRgb(h, s, l) {
+            h /= 360; s /= 100; l /= 100;
+            let r, g, b;
+
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+
+                let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                let p = 2 * l - q;
+
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+        }
+
+        // Utility: Hex to RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        // Utility: RGB to Hex
+        function rgbToHex(r, g, b) {
+            return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+        }
+
+        function updateAllFromRgb(r, g, b, exclude = null) {
+            const hsv = rgbToHsv(r, g, b);
+            const hsl = rgbToHsl(r, g, b);
+            const hex = rgbToHex(r, g, b);
+
+            // Update UI
+            controls.display.style.backgroundColor = hex;
+            if (exclude !== 'hex') {
+                controls.hex.value = hex;
+                controls.hexText.value = hex;
+            }
+
+            // Update RGB controls
+            ['r', 'g', 'b'].forEach(key => {
+                const val = (key === 'r') ? r : (key === 'g' ? g : b);
+                if (exclude !== key) {
+                    controls[key].slider.value = val;
+                    controls[key].num.value = val;
+                }
+                controls[key].txt.innerText = componentToHex(controls[key].num.value);
+            });
+
+            // Update HSV controls
+            ['h', 's', 'v'].forEach(k => {
+                const key = 'hsv_' + k;
+                if (exclude !== key) {
+                    controls[key].slider.value = hsv[k];
+                    controls[key].num.value = hsv[k];
+                }
+                controls[key].txt.innerText = controls[key].num.value + (k === 'h' ? '°' : '%');
+            });
+
+            // Update HSL controls
+            ['h', 's', 'l'].forEach(k => {
+                const key = 'hsl_' + k;
+                if (exclude !== key) {
+                    controls[key].slider.value = hsl[k];
+                    controls[key].num.value = hsl[k];
+                }
+                controls[key].txt.innerText = controls[key].num.value + (k === 'h' ? '°' : '%');
+            });
+        }
+
+        // Event Listeners for RGB
+        ['r', 'g', 'b'].forEach(key => {
+            const update = () => {
+                const r = parseInt(controls.r.num.value);
+                const g = parseInt(controls.g.num.value);
+                const b = parseInt(controls.b.num.value);
+                updateAllFromRgb(r, g, b, key);
+            };
+
+            controls[key].slider.addEventListener('input', (e) => {
+                controls[key].num.value = e.target.value;
+                update();
+            });
+            controls[key].num.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 0;
+                val = Math.max(0, Math.min(255, val));
+                controls[key].slider.value = val;
+                update();
+            });
+        });
+
+        // Event Listeners for HSV
+        ['h', 's', 'v'].forEach(k => {
+            const key = 'hsv_' + k;
+            const update = () => {
+                const h = parseInt(controls.hsv_h.num.value);
+                const s = parseInt(controls.hsv_s.num.value);
+                const v = parseInt(controls.hsv_v.num.value);
+                const rgb = hsvToRgb(h, s, v);
+                updateAllFromRgb(rgb.r, rgb.g, rgb.b, key);
+            };
+
+            controls[key].slider.addEventListener('input', (e) => {
+                controls[key].num.value = e.target.value;
+                update();
+            });
+            controls[key].num.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 0;
+                const max = k === 'h' ? 360 : 100;
+                val = Math.max(0, Math.min(max, val));
+                controls[key].slider.value = val;
+                update();
+            });
+        });
+
+        // Event Listeners for HSL
+        ['h', 's', 'l'].forEach(k => {
+            const key = 'hsl_' + k;
+            const update = () => {
+                const h = parseInt(controls.hsl_h.num.value);
+                const s = parseInt(controls.hsl_s.num.value);
+                const l = parseInt(controls.hsl_l.num.value);
+                const rgb = hslToRgb(h, s, l);
+                updateAllFromRgb(rgb.r, rgb.g, rgb.b, key);
+            };
+
+            controls[key].slider.addEventListener('input', (e) => {
+                controls[key].num.value = e.target.value;
+                update();
+            });
+            controls[key].num.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 0;
+                const max = k === 'h' ? 360 : 100;
+                val = Math.max(0, Math.min(max, val));
+                controls[key].slider.value = val;
+                update();
+            });
+        });
+
+        // Event Listeners for Hex
+        controls.hex.addEventListener('input', (e) => {
+            const rgb = hexToRgb(e.target.value);
+            if (rgb) updateAllFromRgb(rgb.r, rgb.g, rgb.b, 'hex');
+        });
+
+        controls.hexText.addEventListener('input', (e) => {
+            let val = e.target.value;
+            if (!val.startsWith('#')) val = '#' + val;
+            const rgb = hexToRgb(val);
+            if (rgb) updateAllFromRgb(rgb.r, rgb.g, rgb.b, 'hex');
+        });
+
+        // Initialize with #7F007F
+        updateAllFromRgb(127, 0, 127);
+    </script>
+</body>
+</html>
