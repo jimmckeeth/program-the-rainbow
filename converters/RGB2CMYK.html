@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGB to CMYK Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=range] {
+            accent-color: #4f46e5;
+        }
+        .color-preview {
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl border border-slate-200">
+        <h1 class="text-2xl font-bold text-slate-800 mb-6 text-center">RGB to CMYK Converter</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Left Column: Visuals & Hex -->
+            <div class="space-y-6">
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-slate-600">Color Preview & Picker</label>
+                    <div id="colorDisplay" class="w-full h-32 rounded-lg border border-slate-300 transition-colors duration-150 cursor-pointer relative overflow-hidden">
+                        <input type="color" id="hexInput" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="hexText" class="block text-sm font-semibold text-slate-600">Hex Code</label>
+                    <input type="text" id="hexText" placeholder="#FFFFFF" 
+                        class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-lg">
+                </div>
+            </div>
+
+            <!-- Right Column: RGB Sliders -->
+            <div class="space-y-4">
+                <div class="flex items-baseline justify-between border-b pb-1">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">RGB Model</h2>
+                    <span class="text-[10px] font-bold text-slate-300 uppercase">Hex Label / Dec Input</span>
+                </div>
+                
+                <!-- Red -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Red</label>
+                        <span id="rValText" class="font-mono text-indigo-600 font-bold">FF</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="rSlider" min="0" max="255" value="127" class="flex-grow">
+                        <input type="number" id="rNum" min="0" max="255" value="127" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+
+                <!-- Green -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Green</label>
+                        <span id="gValText" class="font-mono text-indigo-600 font-bold">FF</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="gSlider" min="0" max="255" value="0" class="flex-grow">
+                        <input type="number" id="gNum" min="0" max="255" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+
+                <!-- Blue -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Blue</label>
+                        <span id="bValText" class="font-mono text-indigo-600 font-bold">FF</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="bSlider" min="0" max="255" value="127" class="flex-grow">
+                        <input type="number" id="bNum" min="0" max="255" value="127" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CMYK Section -->
+        <div class="mt-8 pt-6 border-t border-slate-100">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">CMYK Model (%)</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                
+                <!-- Cyan -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Cyan</label>
+                        <span id="cValText">0%</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="cSlider" min="0" max="100" value="0" class="flex-grow">
+                        <input type="number" id="cNum" min="0" max="100" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+
+                <!-- Magenta -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Magenta</label>
+                        <span id="mValText">0%</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="mSlider" min="0" max="100" value="0" class="flex-grow">
+                        <input type="number" id="mNum" min="0" max="100" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+
+                <!-- Yellow -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Yellow</label>
+                        <span id="yValText">0%</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="ySlider" min="0" max="100" value="0" class="flex-grow">
+                        <input type="number" id="yNum" min="0" max="100" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+
+                <!-- Black (Key) -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label>Black (Key)</label>
+                        <span id="kValText">0%</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <input type="range" id="kSlider" min="0" max="100" value="0" class="flex-grow">
+                        <input type="number" id="kNum" min="0" max="100" value="0" class="w-16 px-2 py-1 border rounded text-sm text-center">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const el = (id) => document.getElementById(id);
+        
+        const controls = {
+            r: { slider: el('rSlider'), num: el('rNum'), txt: el('rValText') },
+            g: { slider: el('gSlider'), num: el('gNum'), txt: el('gValText') },
+            b: { slider: el('bSlider'), num: el('bNum'), txt: el('bValText') },
+            c: { slider: el('cSlider'), num: el('cNum'), txt: el('cValText') },
+            m: { slider: el('mSlider'), num: el('mNum'), txt: el('mValText') },
+            y: { slider: el('ySlider'), num: el('yNum'), txt: el('yValText') },
+            k: { slider: el('kSlider'), num: el('kNum'), txt: el('kValText') },
+            hex: el('hexInput'),
+            hexText: el('hexText'),
+            display: el('colorDisplay')
+        };
+
+        // Utility: Single channel to Hex
+        function componentToHex(c) {
+            var hex = parseInt(c).toString(16).toUpperCase();
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+
+        // Utility: RGB to CMYK
+        function rgbToCmyk(r, g, b) {
+            let c = 1 - (r / 255);
+            let m = 1 - (g / 255);
+            let y = 1 - (b / 255);
+            let k = Math.min(c, Math.min(m, y));
+
+            if (k === 1) return { c: 0, m: 0, y: 0, k: 100 };
+            
+            c = Math.round(((c - k) / (1 - k)) * 100);
+            m = Math.round(((m - k) / (1 - k)) * 100);
+            y = Math.round(((y - k) / (1 - k)) * 100);
+            k = Math.round(k * 100);
+
+            return { c, m, y, k };
+        }
+
+        // Utility: CMYK to RGB
+        function cmykToRgb(c, m, y, k) {
+            c /= 100; m /= 100; y /= 100; k /= 100;
+            const r = Math.round(255 * (1 - c) * (1 - k));
+            const g = Math.round(255 * (1 - m) * (1 - k));
+            const b = Math.round(255 * (1 - y) * (1 - k));
+            return { r, g, b };
+        }
+
+        // Utility: Hex to RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        // Utility: RGB to Hex
+        function rgbToHex(r, g, b) {
+            return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+        }
+
+        function updateAllFromRgb(r, g, b, exclude = null) {
+            const cmyk = rgbToCmyk(r, g, b);
+            const hex = rgbToHex(r, g, b);
+
+            // Update UI
+            controls.display.style.backgroundColor = hex;
+            if (exclude !== 'hex') {
+                controls.hex.value = hex;
+                controls.hexText.value = hex;
+            }
+
+            // Update RGB controls
+            ['r', 'g', 'b'].forEach(key => {
+                const val = (key === 'r') ? r : (key === 'g' ? g : b);
+                if (exclude !== key) {
+                    controls[key].slider.value = val;
+                    controls[key].num.value = val;
+                }
+                // Show hex label, keep decimal input
+                controls[key].txt.innerText = componentToHex(controls[key].num.value);
+            });
+
+            // Update CMYK controls
+            ['c', 'm', 'y', 'k'].forEach(key => {
+                if (exclude !== key) {
+                    controls[key].slider.value = cmyk[key];
+                    controls[key].num.value = cmyk[key];
+                }
+                controls[key].txt.innerText = controls[key].num.value + '%';
+            });
+        }
+
+        // Event Listeners for RGB
+        ['r', 'g', 'b'].forEach(key => {
+            const update = () => {
+                const r = parseInt(controls.r.num.value);
+                const g = parseInt(controls.g.num.value);
+                const b = parseInt(controls.b.num.value);
+                updateAllFromRgb(r, g, b, key);
+            };
+
+            controls[key].slider.addEventListener('input', (e) => {
+                controls[key].num.value = e.target.value;
+                update();
+            });
+            controls[key].num.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 0;
+                val = Math.max(0, Math.min(255, val));
+                controls[key].slider.value = val;
+                update();
+            });
+        });
+
+        // Event Listeners for CMYK
+        ['c', 'm', 'y', 'k'].forEach(key => {
+            const update = () => {
+                const c = parseInt(controls.c.num.value);
+                const m = parseInt(controls.m.num.value);
+                const y = parseInt(controls.y.num.value);
+                const k = parseInt(controls.k.num.value);
+                const rgb = cmykToRgb(c, m, y, k);
+                updateAllFromRgb(rgb.r, rgb.g, rgb.b, key);
+            };
+
+            controls[key].slider.addEventListener('input', (e) => {
+                controls[key].num.value = e.target.value;
+                update();
+            });
+            controls[key].num.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 0;
+                val = Math.max(0, Math.min(100, val));
+                controls[key].slider.value = val;
+                update();
+            });
+        });
+
+        // Event Listeners for Hex
+        controls.hex.addEventListener('input', (e) => {
+            const rgb = hexToRgb(e.target.value);
+            if (rgb) updateAllFromRgb(rgb.r, rgb.g, rgb.b, 'hex');
+        });
+
+        controls.hexText.addEventListener('input', (e) => {
+            let val = e.target.value;
+            if (!val.startsWith('#')) val = '#' + val;
+            const rgb = hexToRgb(val);
+            if (rgb) updateAllFromRgb(rgb.r, rgb.g, rgb.b, 'hex');
+        });
+
+        // Initialize with #7F007F
+        updateAllFromRgb(127, 0, 127);
+    </script>
+</body>
+</html>
