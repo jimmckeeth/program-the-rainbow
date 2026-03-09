@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Color Mixer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg border border-slate-200">
+        <h1 class="text-2xl font-bold text-slate-800 mb-6 text-center border-b pb-4">Color Mixer</h1>
+
+        <div class="space-y-8">
+            
+            <!-- Color Pickers -->
+            <div class="flex justify-between items-center gap-4">
+                <div class="flex flex-col items-center gap-2 w-full">
+                    <label class="text-sm font-bold uppercase tracking-wider text-slate-400">Color 1</label>
+                    <input type="color" id="color1" value="#FF0000" class="w-full h-16 cursor-pointer rounded border border-slate-300">
+                    <span id="hex1" class="font-mono text-sm text-slate-600">#FF0000</span>
+                </div>
+                
+                <div class="flex flex-col items-center gap-2 w-full">
+                    <label class="text-sm font-bold uppercase tracking-wider text-slate-400">Color 2</label>
+                    <input type="color" id="color2" value="#0000FF" class="w-full h-16 cursor-pointer rounded border border-slate-300">
+                    <span id="hex2" class="font-mono text-sm text-slate-600">#0000FF</span>
+                </div>
+            </div>
+
+            <!-- Slider -->
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm font-semibold text-slate-600">
+                    <span>100% Color 1</span>
+                    <span id="mixRatio">50% / 50%</span>
+                    <span>100% Color 2</span>
+                </div>
+                <input type="range" id="mixSlider" min="0" max="100" value="50" class="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+            </div>
+
+            <!-- Result -->
+            <div class="flex flex-col items-center space-y-3 pt-4 border-t border-slate-100">
+                <span class="text-sm font-bold uppercase tracking-wider text-slate-400">Mixed Result</span>
+                <div id="resultPreview" class="w-full h-32 rounded-lg shadow-inner border border-slate-200" style="background-color: #800080;"></div>
+                <span id="resultHex" class="font-mono text-xl font-bold text-slate-800">#800080</span>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const color1Input = document.getElementById('color1');
+        const color2Input = document.getElementById('color2');
+        const mixSlider = document.getElementById('mixSlider');
+        
+        const hex1Display = document.getElementById('hex1');
+        const hex2Display = document.getElementById('hex2');
+        const mixRatioDisplay = document.getElementById('mixRatio');
+        const resultPreview = document.getElementById('resultPreview');
+        const resultHex = document.getElementById('resultHex');
+
+        function hexToRgb(hex) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return { r, g, b };
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).toUpperCase();
+        }
+
+        function updateMix() {
+            const c1 = hexToRgb(color1Input.value);
+            const c2 = hexToRgb(color2Input.value);
+            const weight2 = parseInt(mixSlider.value) / 100;
+            const weight1 = 1 - weight2;
+
+            hex1Display.textContent = color1Input.value.toUpperCase();
+            hex2Display.textContent = color2Input.value.toUpperCase();
+            mixRatioDisplay.textContent = `${Math.round(weight1 * 100)}% / ${Math.round(weight2 * 100)}%`;
+
+            const mixedR = Math.round(c1.r * weight1 + c2.r * weight2);
+            const mixedG = Math.round(c1.g * weight1 + c2.g * weight2);
+            const mixedB = Math.round(c1.b * weight1 + c2.b * weight2);
+
+            const mixedHex = rgbToHex(mixedR, mixedG, mixedB);
+
+            resultPreview.style.backgroundColor = mixedHex;
+            resultHex.textContent = mixedHex;
+        }
+
+        color1Input.addEventListener('input', updateMix);
+        color2Input.addEventListener('input', updateMix);
+        mixSlider.addEventListener('input', updateMix);
+
+        // Initial mix
+        updateMix();
+    </script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Scheme Selector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            border-radius: 50%;
+            cursor: crosshair;
+            touch-action: none;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-4xl border border-slate-200">
+        <h1 class="text-2xl font-bold text-slate-800 mb-6 border-b pb-4">Color Scheme Generator</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+            
+            <!-- Controls (Left Column) -->
+            <div class="md:col-span-4 space-y-6">
+                
+                <!-- Color Model Selection -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Color Model</h3>
+                    <div class="flex gap-4 bg-slate-100 p-1 rounded-lg">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="model" value="hsl" checked class="peer sr-only">
+                            <div class="text-center py-2 rounded-md peer-checked:bg-white peer-checked:shadow text-sm font-semibold text-slate-600 peer-checked:text-indigo-600 transition-all">HSL</div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="model" value="hsv" class="peer sr-only">
+                            <div class="text-center py-2 rounded-md peer-checked:bg-white peer-checked:shadow text-sm font-semibold text-slate-600 peer-checked:text-indigo-600 transition-all">HSV</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Scheme Selection -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Harmony Scheme</h3>
+                    <div class="flex flex-col gap-2" id="schemeGroup">
+                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                            <input type="radio" name="scheme" value="monochromatic" class="w-4 h-4 text-indigo-600 accent-indigo-600">
+                            <span class="text-sm font-medium text-slate-700">Monochromatic</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                            <input type="radio" name="scheme" value="analogous" class="w-4 h-4 text-indigo-600 accent-indigo-600">
+                            <span class="text-sm font-medium text-slate-700">Analogous</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                            <input type="radio" name="scheme" value="complementary" checked class="w-4 h-4 text-indigo-600 accent-indigo-600">
+                            <span class="text-sm font-medium text-slate-700">Complementary</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                            <input type="radio" name="scheme" value="split" class="w-4 h-4 text-indigo-600 accent-indigo-600">
+                            <span class="text-sm font-medium text-slate-700">Split-Complementary</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                            <input type="radio" name="scheme" value="triadic" class="w-4 h-4 text-indigo-600 accent-indigo-600">
+                            <span class="text-sm font-medium text-slate-700">Triadic</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                            <input type="radio" name="scheme" value="tetradic" class="w-4 h-4 text-indigo-600 accent-indigo-600">
+                            <span class="text-sm font-medium text-slate-700">Tetradic</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Lightness/Value Slider -->
+                <div class="space-y-2 pt-4 border-t border-slate-100">
+                    <div class="flex justify-between text-xs font-medium text-slate-500">
+                        <label id="lvLabel">Lightness</label>
+                        <span id="lvVal">50%</span>
+                    </div>
+                    <input type="range" id="lvSlider" min="0" max="100" value="50" class="w-full accent-indigo-600">
+                </div>
+            </div>
+
+            <!-- Visualization & Output (Right Column) -->
+            <div class="md:col-span-8 flex flex-col items-center space-y-6">
+                
+                <!-- Color Wheel Container -->
+                <div class="relative inline-block">
+                    <!-- Base wheel rendered once per Lightness/Model change -->
+                    <canvas id="colorWheel" width="320" height="320"></canvas>
+                    <!-- Overlay canvas for interactive markers -->
+                    <canvas id="markerOverlay" width="320" height="320" class="absolute top-0 left-0 pointer-events-auto"></canvas>
+                </div>
+
+                <!-- Swatches -->
+                <div id="swatchContainer" class="flex gap-2 w-full justify-center h-12">
+                    <!-- Swatches injected via JS -->
+                </div>
+
+                <!-- JSON Output -->
+                <div class="w-full space-y-2">
+                    <label class="text-sm font-bold uppercase tracking-wider text-slate-400">Scheme Array Output</label>
+                    <textarea id="outputBox" readonly class="w-full h-24 p-3 bg-slate-50 border border-slate-200 rounded-lg font-mono text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const canvasWheel = document.getElementById('colorWheel');
+        const ctxWheel = canvasWheel.getContext('2d', { willReadFrequently: true });
+        
+        const canvasOverlay = document.getElementById('markerOverlay');
+        const ctxOverlay = canvasOverlay.getContext('2d');
+        
+        const lvSlider = document.getElementById('lvSlider');
+        const lvLabel = document.getElementById('lvLabel');
+        const lvVal = document.getElementById('lvVal');
+        const outputBox = document.getElementById('outputBox');
+        const swatchContainer = document.getElementById('swatchContainer');
+        const radioModels = document.querySelectorAll('input[name="model"]');
+        const radioSchemes = document.querySelectorAll('input[name="scheme"]');
+
+        // State
+        let state = {
+            model: 'hsl', // 'hsl' or 'hsv'
+            scheme: 'complementary',
+            hue: 0,
+            sat: 100,
+            lv: 50 // Lightness or Value
+        };
+
+        const size = canvasWheel.width;
+        const radius = size / 2;
+        const cx = radius;
+        const cy = radius;
+
+        // --- Core Math Conversions ---
+        function hslToRgb(h, s, l) {
+            h /= 360; s /= 100; l /= 100;
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                let p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+        }
+
+        function hsvToRgb(h, s, v) {
+            h /= 360; s /= 100; v /= 100;
+            let r, g, b;
+            let i = Math.floor(h * 6);
+            let f = h * 6 - i;
+            let p = v * (1 - s);
+            let q = v * (1 - f * s);
+            let t = v * (1 - (1 - f) * s);
+            switch (i % 6) {
+                case 0: r = v, g = t, b = p; break;
+                case 1: r = q, g = v, b = p; break;
+                case 2: r = p, g = v, b = t; break;
+                case 3: r = p, g = q, b = v; break;
+                case 4: r = t, g = p, b = v; break;
+                case 5: r = v, g = p, b = q; break;
+            }
+            return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).toUpperCase();
+        }
+
+        // --- Rendering & Logic ---
+        
+        // Render the base color wheel pixel by pixel
+        function renderWheel() {
+            const imgData = ctxWheel.createImageData(size, size);
+            const data = imgData.data;
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const dx = x - cx;
+                    const dy = y - cy;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d <= radius) {
+                        let h = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+                        let s = (d / radius) * 100;
+                        let rgb = state.model === 'hsl' ? hslToRgb(h, s, state.lv) : hsvToRgb(h, s, state.lv);
+                        const idx = (y * size + x) * 4;
+                        data[idx] = rgb.r;
+                        data[idx+1] = rgb.g;
+                        data[idx+2] = rgb.b;
+                        data[idx+3] = 255;
+                    }
+                }
+            }
+            ctxWheel.putImageData(imgData, 0, 0);
+        }
+
+        // Calculate scheme colors
+        function getSchemeColors() {
+            const h = state.hue;
+            const s = state.sat;
+            const lv = state.lv;
+            let schemeAngles = [];
+
+            switch(state.scheme) {
+                case 'monochromatic':
+                    // We modify lightness/value for monochromatic instead of hue
+                    return [
+                        { h, s, lv: Math.max(0, lv - 30) },
+                        { h, s, lv: Math.max(0, lv - 15) },
+                        { h, s, lv },
+                        { h, s, lv: Math.min(100, lv + 15) },
+                        { h, s, lv: Math.min(100, lv + 30) }
+                    ];
+                case 'analogous': schemeAngles = [h - 30, h, h + 30]; break;
+                case 'complementary': schemeAngles = [h, h + 180]; break;
+                case 'split': schemeAngles = [h, h + 150, h + 210]; break;
+                case 'triadic': schemeAngles = [h, h + 120, h + 240]; break;
+                case 'tetradic': schemeAngles = [h, h + 90, h + 180, h + 270]; break;
+            }
+
+            return schemeAngles.map(angle => ({
+                h: (angle + 360) % 360,
+                s: s,
+                lv: lv
+            }));
+        }
+
+        // Render markers and update outputs
+        function updateUI() {
+            const colors = getSchemeColors();
+            
+            // 1. Draw Overlay Markers
+            ctxOverlay.clearRect(0, 0, size, size);
+            const hexArray = [];
+
+            swatchContainer.innerHTML = '';
+
+            colors.forEach((col, idx) => {
+                // Calculate physical position for the marker
+                // Monochromatic might share the same physical spot on a 2D wheel, so marker stacks
+                const distance = (col.s / 100) * radius;
+                const radians = col.h * Math.PI / 180;
+                const px = cx + Math.cos(radians) * distance;
+                const py = cy + Math.sin(radians) * distance;
+
+                // Determine color
+                const rgb = state.model === 'hsl' ? hslToRgb(col.h, col.s, col.lv) : hsvToRgb(col.h, col.s, col.lv);
+                const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+                hexArray.push(hex);
+
+                // Draw Marker on Canvas
+                ctxOverlay.beginPath();
+                ctxOverlay.arc(px, py, idx === 0 ? 8 : 6, 0, 2 * Math.PI);
+                ctxOverlay.fillStyle = hex;
+                ctxOverlay.fill();
+                ctxOverlay.lineWidth = 2;
+                // High contrast border
+                ctxOverlay.strokeStyle = (rgb.r*0.299 + rgb.g*0.587 + rgb.b*0.114) > 186 ? '#000000' : '#FFFFFF';
+                ctxOverlay.stroke();
+
+                // Draw Line to Center if not base color
+                if (idx > 0 && state.scheme !== 'monochromatic') {
+                    ctxOverlay.beginPath();
+                    ctxOverlay.moveTo(cx, cy);
+                    ctxOverlay.lineTo(px, py);
+                    ctxOverlay.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctxOverlay.lineWidth = 1;
+                    ctxOverlay.stroke();
+                }
+
+                // Append UI Swatch
+                const swatch = document.createElement('div');
+                swatch.className = 'flex-1 rounded-md shadow-sm border border-slate-200';
+                swatch.style.backgroundColor = hex;
+                swatchContainer.appendChild(swatch);
+            });
+
+            // Base color line
+            if (state.scheme !== 'monochromatic') {
+                const base = colors[0];
+                const distance = (base.s / 100) * radius;
+                const radians = base.h * Math.PI / 180;
+                ctxOverlay.beginPath();
+                ctxOverlay.moveTo(cx, cy);
+                ctxOverlay.lineTo(cx + Math.cos(radians) * distance, cy + Math.sin(radians) * distance);
+                ctxOverlay.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                ctxOverlay.lineWidth = 1.5;
+                ctxOverlay.stroke();
+            }
+
+            // 2. Update Text Area
+            outputBox.value = JSON.stringify(hexArray, null, 2);
+        }
+
+        // --- Interaction Handlers ---
+        
+        function handleInteraction(e) {
+            e.preventDefault();
+            const rect = canvasOverlay.getBoundingClientRect();
+            let clientX, clientY;
+            
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            
+            const dx = x - cx;
+            const dy = y - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            // Cap selection to radius
+            const cappedDist = Math.min(dist, radius);
+            
+            state.hue = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+            state.sat = (cappedDist / radius) * 100;
+            
+            updateUI();
+        }
+
+        let isDragging = false;
+        canvasOverlay.addEventListener('mousedown', (e) => { isDragging = true; handleInteraction(e); });
+        window.addEventListener('mouseup', () => isDragging = false);
+        window.addEventListener('mousemove', (e) => { if (isDragging) handleInteraction(e); });
+        
+        canvasOverlay.addEventListener('touchstart', (e) => { isDragging = true; handleInteraction(e); });
+        window.addEventListener('touchend', () => isDragging = false);
+        window.addEventListener('touchmove', (e) => { if (isDragging) handleInteraction(e); }, { passive: false });
+
+        // Inputs
+        radioModels.forEach(radio => radio.addEventListener('change', (e) => {
+            state.model = e.target.value;
+            // Switch defaults if changing models to make visual sense
+            if (state.model === 'hsv') {
+                lvLabel.innerText = 'Value';
+                if (state.lv === 50) state.lv = 100; // default value
+            } else {
+                lvLabel.innerText = 'Lightness';
+                if (state.lv === 100) state.lv = 50; // default lightness
+            }
+            lvSlider.value = state.lv;
+            lvVal.innerText = state.lv + '%';
+            renderWheel();
+            updateUI();
+        }));
+
+        radioSchemes.forEach(radio => radio.addEventListener('change', (e) => {
+            state.scheme = e.target.value;
+            updateUI();
+        }));
+
+        lvSlider.addEventListener('input', (e) => {
+            state.lv = parseInt(e.target.value);
+            lvVal.innerText = state.lv + '%';
+            renderWheel();
+            updateUI();
+        });
+
+        // Init
+        renderWheel();
+        updateUI();
+    </script>
+</body>
+</html>
