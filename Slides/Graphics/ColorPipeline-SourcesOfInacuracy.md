@@ -8,7 +8,7 @@ The core problem is that a color value like `#3A8FBD` is not a description of a 
 
 Before the designer clicks a single pixel, the color space they're working in sets an absolute ceiling on what's possible.
 
-In the CIE 1931 xy chromaticity diagram, sRGB covers only [33.5% of all chromaticities](https://tftcentral.co.uk/articles/pointers_gamut). For reference, Adobe RGB covers 45.2% of all chromaticities, and Pointer's Gamut — the range of real-world surface colors visible to the human eye — [covers 47.9%](https://tftcentral.co.uk/articles/pointers_gamut). This means that even before a designer opens their tool, a large fraction of colors they can actually see are simply inexpressible in the system they'll use to specify them.
+In the CIE 1931 xy chromaticity diagram, sRGB covers only 33.5% of all chromaticities. For reference, Adobe RGB covers 45.2% of all chromaticities, and [Pointer's Gamut](https://tftcentral.co.uk/articles/pointers_gamut) — the range of real-world surface colors visible to the human eye — covers 47.9%. This means that even before a designer opens their tool, a large fraction of colors they can actually see are simply inexpressible in the system they'll use to specify them.
 
 **Drift potential**: The most saturated teals, cyans, and greens in nature cannot exist in sRGB — full stop.
 
