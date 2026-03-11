@@ -46,12 +46,6 @@ The following is a list of images used in my presentation along with a descripti
   * The Stockman and Sharpe (2000) 2° cone fundamentals, as found at [Cone Fundamentals](http://cvrl.ucl.ac.uk/cones.htm). *cvrl.ucl.ac.uk*. Retrieved on 2025-11-11., plotted against the most accurate sRGB spectrum I could manage. Now in SVG.
 * [Hsl-hsv models.svg](https://commons.wikimedia.org/w/index.php?curid=9445469) by [Jacob Rus](https://commons.wikimedia.org/wiki/User:Jacobolus) licensed  [CC SA-By 3.0](https://creativecommons.org/licenses/by-sa/3.0/deed.en)
   * HSL and HSV are two cylindrical representations of the RGB gamut, created in the mid-1970s and used mostly in image editing and computer graphics. Shown are cut-away 3d models of HSL and HSV on top, along with three 2D plots (for each model) where one parameter is held constant and the other two are varied. For details, see the article [HSL and HSV](https://en.wikipedia.org/wiki/HSL_and_HSV).
-* [Tint-tone-shade.svg](https://commons.wikimedia.org/wiki/File:Tint-tone-shade.svg) by [Jacobolus](https://commons.wikimedia.org/wiki/User:Jacobolus) licensed Public Domain
-  * A diagram demonstrating common color mixing terms. A tint is any mixture of a a bright “pure” color with white. A shade is any mixture of a “pure” color with black. A tone is any mixture of all three: white, black, and the “pure” color.
-* [Homer_British_Museum.webp](https://en.wikipedia.org/wiki/Homer#/media/File:Homer_British_Museum.jpg) by [JW1805](https://en.wikipedia.org/wiki/User:JW1805) licensed Public Domain
-  * Photograph taken of the Marble terminal bust of Homer in the British Museum, London. Roman copy of a lost Hellenistic original of the 2nd c. BC. From Baiae, Italy. The so-called Hellenistic blind-type can be paralleled with figures of the Pergamon Altar, and the original of the type was perhaps created for the great library at Pergamon.
-* [Dichromatic_color_vision.svg](https://commons.wikimedia.org/wiki/File:Dichromatic_color_vision.svg) by [Salsero35](https://commons.wikimedia.org/wiki/User:Salsero35) licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
-  * Typical cone cell [spectral sensitivity](https://en.wikipedia.org/wiki/Spectral_sensitivity) of organisms with [dichromatic](https://en.wikipedia.org/wiki/Dichromacy) color vision.
 * [Electromagnetic_spectrum,_NASA_illustration.webp](https://commons.wikimedia.org/wiki/File:Electromagnetic_spectrum,_NASA_illustration.jpg) visualization of the electromagnetic spectrum by [NASA](https://science.nasa.gov/ems/) licensed ![Public Domain](https://commons.wikimedia.org/wiki/File:Electromagnetic_spectrum,_NASA_illustration.jpg?uselang=en#Licensing)
 * [United_States_Frequency_Allocations_Chart_2016_-_The_Radio_Spectrum.pdf](https://en.wikipedia.org/wiki/File:United_States_Frequency_Allocations_Chart_2016_-_The_Radio_Spectrum.pdf) by the National Telecommunications and Information Administration (NTIA) - [Office of Spectrum Management (OSM)](https://www.ntia.gov/office/office-spectrum-management-osm) licesened Public Domain.
 * [Chart_of_Electromagnetic_Radiations.webp](https://commons.wikimedia.org/wiki/File:Chart_of_Electromagnetic_Radiations.jpg) by [W.M Welch Scientific Company](https://www.madeinchicagomuseum.com/single-post/welch-scientific-co/) licesned Public Domain
@@ -62,10 +56,22 @@ The following is a list of images used in my presentation along with a descripti
 * [RGB_color_wheel_10.svg](https://commons.wikimedia.org/wiki/File:RGB_color_wheel_10.svg) RGB color wheel (10°) and RGB pixels by [László Németh](https://commons.wikimedia.org/wiki/User:Nl74) licensed [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en).
 * [RGBCube_a.svg](https://commons.wikimedia.org/wiki/File:RGBCube_a.svg) RGB color space mapped to a unit cube, with corner cut-away shown - by [SharkD](https://commons.wikimedia.org/wiki/User:SharkD) licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0).
 * [munsell.webp](https://github.com/mjhorvath/Datumizer-Wikipedia-Illustrations/tree/master/Color/Munsell) by [mjhorvath](https://github.com/mjhorvath) licensed [LGPL](https://github.com/mjhorvath/Datumizer-Wikipedia-Illustrations/blob/master/Color/Munsell/license_LGPL%202.1.txt).
-* [hsl_sphere.svg](https://github.com/mjhorvath/Datumizer-Wikipedia-Illustrations/) by Mike Horvath.
 * [ColorSolid.webp](https://github.com/mjhorvath/Datumizer-Wikipedia-Illustrations/tree/master/Color/ColorSolid) by [Mike Horvath licensed CC-LGPL](https://github.com/mjhorvath/Datumizer-Wikipedia-Illustrations/blob/master/Color/ColorSolid/CSolid_readme.txt).
 * [CIELHLC_3D.webp](https://commons.wikimedia.org/wiki/File:CIELHLC_3D.png) CIELHLC 3D color space by Der freieFarbe e.V. licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0).
 * [Colour_gradient_comparison_of_HSV_and_okLCH.webp](https://commons.wikimedia.org/wiki/File:Colour_gradient_comparison_of_HSV_and_okLCH.png) Comparison of HSV and okLCH with regard to a full-rainbow gradient. The okLCH is perceptually uniform, whereas the HSV has clear vertical lines which emerge - by [Intervex](https://commons.wikimedia.org/wiki/User:Intervex) licensed [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en).
+* [ArgyllCMS.webp](https://www.argyllcms.com/) Argyll CMS homepage logo
+* [BSDG Logo - Kotlin, Pythin, Rust, C - Mountains - website.webp](https://bsdg.dev/) BSDG logo, Own work by Jim McKeeth
+* [CIE1931xy_gamut_comparison.svg](https://commons.wikimedia.org/wiki/File:CIE1931xy_gamut_comparison.svg) Comparison of some RGB and CMYK colour gamut on a CIE 1931 xy chromaticity diagram, based on https://commons.wikimedia.org/wiki/File:CIE1931xy_blank.svg and data from Blatner and Fraser's "Real World Photoshop CS", p. 179: https://canopuscomputing.com.au/gallery2/d/8631-1/Gamuts_comparison-B_F.jpg. by BenRG and [cmglee](https://commons.wikimedia.org/wiki/User:Cmglee)
+* [Commodore-VIC-20-FL.webp](https://commons.wikimedia.org/wiki/File:Commodore-VIC-20-FL.jpg) The Commodore VIC-20, an 8-bit computer released in 1981. A popular and inexpensive computer, it is the precursor to the immensely successful Commodore 64, which shares the same aesthetic as the VIC-20. by [Evan-Amos](https://commons.wikimedia.org/wiki/User:Evan-Amos) licensed p## Included Imagesublic domain.
+* [Commodore_VIC_20_logo.svg](https://commons.wikimedia.org/wiki/File:Commodore_VIC_20_logo.svg) Logo of [Commodore VIC-20](https://en.wikipedia.org/wiki/Commodore_VIC-20) by Commodore Business Machines uploaded by [DigitalIceAge](https://commons.wikimedia.org/wiki/User:DigitalIceAge) public domain
+* [tint-tone-shade.svg](https://commons.wikimedia.org/wiki/File:Tint-tone-shade.svg) by [Jacobolus](https://commons.wikimedia.org/wiki/User:Jacobolus) licensed Public Domain
+  * A diagram demonstrating common color mixing terms. A tint is any mixture of a a bright “pure” color with white. A shade is any mixture of a “pure” color with black. A tone is any mixture of all three: white, black, and the “pure” color.
+* [Dichromatic_color_vision.svg](https://commons.wikimedia.org/wiki/File:Dichromatic_color_vision.svg) by [Salsero35](https://commons.wikimedia.org/wiki/User:Salsero35) licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)
+  * Typical cone cell [spectral sensitivity](https://en.wikipedia.org/wiki/Spectral_sensitivity) of organisms with [dichromatic](https://en.wikipedia.org/wiki/Dichromacy) color vision.
+* [Homer(BritishMuseum).webp](https://en.wikipedia.org/wiki/Homer#/media/File:Homer_British_Museum.jpg) by [JW1805](https://en.wikipedia.org/wiki/User:JW1805) licensed Public Domain
+  * Photograph taken of the Marble terminal bust of Homer in the British Museum, London. Roman copy of a lost Hellenistic original of the 2nd c. BC. From Baiae, Italy. The so-called Hellenistic blind-type can be paralleled with figures of the Pergamon Altar, and the original of the type was perhaps created for the great library at Pergamon.
+* [hsl_sphere.svg](https://github.com/mjhorvath/Datumizer-Wikipedia-Illustrations/) by [Mike Horvath](https://github.com/mjhorvath) a spherical representation of the HSL color space.
+* [CMYK.svg](CMYK.svg) the CMYK palette by Jim McKeeth. 
 
 ## Missing Images
 
@@ -74,3 +80,83 @@ These images don't have a local file.
 ## Unlisted Images
 
 These images are present, but lack source information.
+
+* ColorAccessibility_processed.webp
+* ColorNameRoses.webp
+* ColorPipeline-DriftSources.webp
+* ColorProblems.webp
+* ColorblindJusticeGemini.webp
+* ColoursInCulture.webp
+* GNOME-ColorManager.webp
+* Gemini-Aristotle's On Color.webp
+* Gemini-BasicColorTerms.webp
+* Gemini-Colorblindness.webp
+* Gemini-EarlyColorTheory.webp
+* Gemini-Garish-MSDOS-UI.webp
+* Gemini-Green-Phosphor-UI.webp
+* Gemini-Iliad-Trojan-Blue.webp
+* Gemini-LinguisticRelativityAndColorNaming.webp
+* Gemini-Odyssey-No-Blue.webp
+* Gemini-ProcessVsSpotColor.webp
+* Gemini-Tetrachromacy-Lite.webp
+* Gemini-Tetrachromacy.webp
+* Gemini-Trichromacy-Lite.webp
+* Gemini-Trichromacy.webp
+* Gemini-color_spaces_models_gamuts_profiles.webp
+* Gemini_Homer-Odyssey-with-Blue.webp
+* GnomeColorManager-ScreenShot1.webp
+* GnomeColorManager-ScreenShot2.webp
+* GnomeColorManager-ScreenShot3.webp
+* Gradient RGB-CMY Color Wheel 2.webp
+* Gradient RGB-CMY Color Wheel.webp
+* Homer(BritishMuseum).webp
+* Hsl-hsv_models.webp
+* ICC-Profile_TechnicalArchitecture.webp
+* ICC.svg
+* ICC_V2_Logo_cmyk.svg
+* ICC_V4_Logo.svg
+* ImageMagick-ColorManagement.webp
+* ImageMagick_logo.svg
+* Ishihara_1.svg
+* Ishihara_11.webp
+* Ishihara_19.webp
+* Ishihara_23.webp
+* Ishihara_Plate_21.svg
+* KnowledgeScaffoldingPhilosophy.webp
+* LittleCMS-overview.webp
+* LittleCMS-tall.svg
+* LittleCMS.svg
+* MSDOS-icon.svg
+* Microsoft_logo_(2012).svg
+* Midjourney-Aristotle-lvs.tattoo_aristotle_with_a_white_background_--v_7_9073174b-e808-4170-9be7-121d28d5b19e.webp
+* Midjourney-Aristotle-marenmorstad_ancient_philosophy_vapor_wave_style_--v_7_231a51f3-c1fa-4772-9a7d-f5dee89e9a3f.webp
+* Midjourney-Aristotle-wildan8121_A_detailing_half_body_of_classical_statue_philosophe_74bc8c91-5b72-44f3-85e2-9bc801b0c826.webp
+* Midjourney-Strawberries.webp
+* Midjourney_rainbow_coming_from_a_laptop_faa1e74f-8cc0-429d-ae15-5c9507a4df7e_2.webp
+* ProgramTheRainbow.svg
+* RGB Color Mixing.svg
+* RGB_color_wheel (new).ai
+* RGB_color_wheel (new).svg
+* RYB Color Mixing.svg
+* RYB Color Star.svg
+* RYB_color_wheel (new).ai
+* Rainbow-Hex.svg
+* Rainbow-expanding.svg
+* Rainbow-gradient-fully-saturated.svg
+* Rainbow-gradient-proportional.svg
+* Rainbow-gradient-seamless.svg
+* RainbowEvolution.svg
+* SKIA.svg
+* Visual & Color Accessibility.webp
+* darlinn23_a_portrait_of_an_abstract_human_figure_made_up_only_o_8e5da2bb-4e32-4eac-8e40-6e572cb3b0b3.webp
+* hyperdimensional_klein_manifold.webp
+* iccMAX-HiResLogoRGB.svg
+* michaelmcgill._a_flat_futuristic_image_of_the_stoic_philosopher_95a3ba83-9f9b-4b8b-86f2-889046aa443b.webp
+* midjourney_Portrait_pop_art_painting_of_Isaac_Newton_as_a_heroic_8f76e9eb-697d-48f4-9580-3a1ce83f35db.webp
+* noun-thought-bubble-75855.svg
+* oklch-picker.webp
+* plaid-386815.webp
+* qr-code.svg
+* qr-code.webp
+* slides-rainbow-qr-code.svg
+* slides-rainbow-qr-code.webp
