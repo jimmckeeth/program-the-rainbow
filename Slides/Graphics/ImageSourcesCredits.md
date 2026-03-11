@@ -1,5 +1,9 @@
 # Image Source Credits
 
+The following is a list of images used in my presentation along with a description, credits, and license information.
+
+## Included Images
+
 * [Prism-compressor.svg](https://commons.wikimedia.org/wiki/File:Prism-compressor.svg) by [Hankwang](https://en.wikipedia.org/wiki/User:Hankwang) licensed [CC SA BY 3.0](https://creativecommons.org/licenses/by-sa/3.0/deed.en)
   * The image is to scale, with refractive indices 1.6952, 1.7321, and 1.765 for R, G, and B, and a 60 degree top angle of the prisms.
 * [Dispersive_Prism_Illustration_by_Spigget.webp](https://commons.wikimedia.org/wiki/File:Dispersive_Prism_Illustration_by_Spigget.jpg) licensed [CC SA BY 3.0](https://creativecommons.org/licenses/by-sa/3.0/deed.en) - A dispersive equilateral prism refracting and reflecting an incoming beam of uniform white light rendered into the sRGB IEC61966-2.1 color space
@@ -62,3 +66,11 @@
 * [ColorSolid.webp](https://github.com/mjhorvath/Datumizer-Wikipedia-Illustrations/tree/master/Color/ColorSolid) by [Mike Horvath licensed CC-LGPL](https://github.com/mjhorvath/Datumizer-Wikipedia-Illustrations/blob/master/Color/ColorSolid/CSolid_readme.txt).
 * [CIELHLC_3D.webp](https://commons.wikimedia.org/wiki/File:CIELHLC_3D.png) CIELHLC 3D color space by Der freieFarbe e.V. licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0).
 * [Colour_gradient_comparison_of_HSV_and_okLCH.webp](https://commons.wikimedia.org/wiki/File:Colour_gradient_comparison_of_HSV_and_okLCH.png) Comparison of HSV and okLCH with regard to a full-rainbow gradient. The okLCH is perceptually uniform, whereas the HSV has clear vertical lines which emerge - by [Intervex](https://commons.wikimedia.org/wiki/User:Intervex) licensed [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en).
+
+## Missing Images
+
+These images don't have a local file.
+
+## Unlisted Images
+
+These images are present, but lack source information.
