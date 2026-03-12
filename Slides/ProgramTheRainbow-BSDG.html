@@ -814,7 +814,7 @@ would smell as sweet</strong></em></p></div></div></div></div><div class="sl-blo
 				controls: true,
 				progress: true,
 				mouseWheel: false,
-				showNotes: false,
+				showNotes: SLConfig.deck.user.settings.present_notes,
 				slideNumber: true,
 				fragmentInURL: true,
 
@@ -840,8 +840,117 @@ would smell as sweet</strong></em></p></div></div></div></div><div class="sl-blo
 
 				plugins: [ RevealZoom, RevealNotes, RevealMarkdown, RevealHighlight ]
 			});
-		</script>
 
+			// Speaker Notes Toggle
+			(function() {
+				const hasNotes = (slide) => {
+					if (!slide) return false;
+					const id = slide.getAttribute('data-id');
+					return !!(window.SLConfig && SLConfig.deck && SLConfig.deck.notes && SLConfig.deck.notes[id] && SLConfig.deck.notes[id].trim() !== "");
+				};
+
+				const addNotesToggle = () => {
+					const controls = document.querySelector('.reveal > aside.controls') || document.querySelector('.reveal > .controls');
+					
+					if (!controls) {
+						setTimeout(addNotesToggle, 500);
+						return;
+					}
+
+					if (!document.querySelector('.notes-toggle')) {
+						controls.style.overflow = 'visible';
+						
+						const toggle = document.createElement('button');
+						toggle.className = 'notes-toggle';
+						toggle.setAttribute('aria-label', 'Toggle speaker notes');
+						toggle.setAttribute('type', 'button');
+						
+						Object.assign(toggle.style, {
+							position: 'absolute',
+							left: '-70px',
+							bottom: '32px',
+							background: 'none',
+							border: 'none',
+							fontSize: '24px',
+							lineHeight: '1',
+							padding: '4px',
+							cursor: 'pointer',
+							opacity: '0.6',
+							zIndex: '10000',
+							pointerEvents: 'auto',
+							visibility: 'visible',
+							transition: 'opacity 0.2s, transform 0.2s',
+							display: 'none' 
+						});
+						
+						toggle.innerHTML = '📝';
+						toggle.title = 'Toggle Speaker Notes';
+
+						const updateToggleVisibility = () => {
+							const currentSlide = Reveal.getCurrentSlide();
+							const slideHasNotes = hasNotes(currentSlide);
+							const masterShowNotes = !!(window.SLConfig && SLConfig.deck && SLConfig.deck.user && SLConfig.deck.user.settings && SLConfig.deck.user.settings.present_notes);
+							
+							// Only show the toggle button on slides that actually have notes
+							toggle.style.display = slideHasNotes ? 'block' : 'none';
+							
+							if (slideHasNotes) {
+								toggle.style.opacity = masterShowNotes ? '1' : '0.6';
+								toggle.style.transform = masterShowNotes ? 'scale(1.2)' : 'scale(1)';
+								
+								// If we are on a slide with notes, show them ONLY if master setting is ON
+								if (Reveal.getConfig().showNotes !== masterShowNotes) {
+									Reveal.configure({ showNotes: masterShowNotes });
+								}
+							} else {
+								// Automatically hide notes panel if slide has no notes
+								if (Reveal.getConfig().showNotes !== false) {
+									Reveal.configure({ showNotes: false });
+								}
+							}
+						};
+
+						// Initial state
+						updateToggleVisibility();
+						
+						toggle.addEventListener('mouseover', () => {
+							toggle.style.opacity = '1';
+						});
+						toggle.addEventListener('mouseout', () => {
+							const masterShowNotes = !!(window.SLConfig && SLConfig.deck && SLConfig.deck.user && SLConfig.deck.user.settings && SLConfig.deck.user.settings.present_notes);
+							toggle.style.opacity = masterShowNotes ? '1' : '0.6';
+						});
+						
+						toggle.addEventListener('click', (e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							const currentMaster = !!(window.SLConfig && SLConfig.deck && SLConfig.deck.user && SLConfig.deck.user.settings && SLConfig.deck.user.settings.present_notes);
+							const newShowNotes = !currentMaster;
+							
+							// Update master setting
+							if (window.SLConfig && SLConfig.deck && SLConfig.deck.user && SLConfig.deck.user.settings) {
+								SLConfig.deck.user.settings.present_notes = newShowNotes;
+							}
+							
+							// Apply to Reveal
+							Reveal.configure({ showNotes: newShowNotes });
+							
+							updateToggleVisibility();
+						});
+						
+						controls.appendChild(toggle);
+						
+						Reveal.on('slidechanged', updateToggleVisibility);
+					}
+				};
+
+				if (Reveal.isReady()) {
+				        addNotesToggle();
+				} else {
+				        Reveal.on('ready', addNotesToggle);
+				}
+				})();
+				</script>
 		
 
 
