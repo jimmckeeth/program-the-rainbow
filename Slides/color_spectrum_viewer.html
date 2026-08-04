@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Space Spectrums</title>
+    <title>Color Spectrum Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom scrollbar for better aesthetics */
@@ -51,6 +51,38 @@
         .grabbing {
             cursor: grabbing !important;
         }
+        .selector-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            border-left: 2px solid rgba(255,255,255,0.95);
+            border-right: 2px solid rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 5;
+        }
+        .selector-tooltip {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 6;
+            pointer-events: none;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font: 11px monospace;
+            white-space: nowrap;
+            border: 1px solid rgba(255,255,255,0.65);
+            box-shadow: 0 1px 3px rgba(0,0,0,.5);
+        }
+        .selector-path {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            overflow: visible;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
@@ -59,7 +91,7 @@
     <div class="bg-gray-800 border-b border-gray-700 p-4 shrink-0 shadow-lg z-20">
         <div class="max-w-7xl mx-auto">
             <div class="flex justify-between items-center mb-4">
-                <h1 class="text-xl font-bold text-blue-400">Spectrum Space Viewer</h1>
+                <h1 class="text-xl font-bold text-blue-400">Color Spectrum Viewer</h1>
                 <button id="btn-reset-all" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded shadow text-sm transition-colors">Reset All</button>
             </div>
             
@@ -134,6 +166,30 @@
         </div>
     </div>
 
+    <!-- Bottom Selection and Format Controls -->
+    <div class="bg-gray-800 border-t border-gray-700 p-3 shrink-0 z-20">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center gap-2 text-sm">
+            <div class="flex items-center gap-1" role="group" aria-label="Color format">
+                <span class="text-gray-400 mr-1">Format</span>
+                <button class="format-button bg-blue-600 text-white px-2 py-1 rounded" data-format="hex">HEX</button>
+                <button class="format-button bg-gray-700 text-white px-2 py-1 rounded" data-format="hashHex">#HEX</button>
+                <button class="format-button bg-gray-700 text-white px-2 py-1 rounded" data-format="rgb">RGB</button>
+                <button class="format-button bg-gray-700 text-white px-2 py-1 rounded" data-format="hsl">HSL</button>
+                <button class="format-button bg-gray-700 text-white px-2 py-1 rounded" data-format="cmyk">CMYK</button>
+            </div>
+            <div class="flex items-center gap-1" role="group" aria-label="Selection mode">
+                <span class="text-gray-400 ml-2 mr-1">Select</span>
+                <button class="selector-button bg-blue-600 text-white px-2 py-1 rounded" data-selector="point">Point</button>
+                <button class="selector-button bg-gray-700 text-white px-2 py-1 rounded" data-selector="vertical">Vertical</button>
+                <button class="selector-button bg-gray-700 text-white px-2 py-1 rounded" data-selector="closest">Closest</button>
+            </div>
+            <textarea id="selected-color" rows="1" readonly placeholder="Click a spectrum to select a color"
+                   class="flex-1 min-w-[220px] max-h-20 bg-gray-900 border border-gray-600 rounded px-3 py-1 text-white font-mono focus:outline-none resize-y"></textarea>
+            <button id="copy-color" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded">Copy</button>
+            <span id="selection-status" class="text-xs text-gray-400" aria-live="polite"></span>
+        </div>
+    </div>
+
     <!-- Info Modal -->
     <div id="color-tooltip" class="color-tooltip hidden">#000000</div>
     <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-200">
@@ -142,7 +198,13 @@
             <div id="modal-body" class="text-gray-300 space-y-4 mb-6 leading-relaxed">
                 <!-- Content injected here -->
             </div>
-            <div class="flex justify-end">
+            <div class="flex flex-wrap justify-end items-center gap-2">
+                <select id="save-format" class="bg-gray-700 text-white border border-gray-600 rounded px-2 py-2">
+                    <option value="svg">SVG</option>
+                    <option value="png">PNG</option>
+                    <option value="json">JSON</option>
+                </select>
+                <button id="modal-save" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded shadow transition-colors">Save</button>
                 <button id="modal-close" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded shadow transition-colors">
                     Close
                 </button>
@@ -159,10 +221,15 @@
             zoom: 1.0,
             order: 'default',
             inverse: false,
-            draggedItemIndex: null
+            draggedItemIndex: null,
+            format: 'hex',
+            selector: 'point',
+            selectedRgb: null,
+            selectedValues: []
         };
 
-        const NUM_STOPS = 120; // Number of color stops in the linear gradients
+        const NUM_STOPS = 360;
+        const COMPACT_ROW_HEIGHT = 64;
 
         // Information text for each space
         const spaceInfo = {
@@ -344,20 +411,27 @@
              return [gamma(r_lin), gamma(g_lin), gamma(b_lin)];
         }
 
-        // Base spaces definition - Note: "sRGB" is first by default
+        // Base spaces definition. This order is the viewer's default order.
         const initialSpaces = [
-            { id: 'sRGB', name: 'sRGB', year: 1996, fn: getSrgb },
             { id: 'XYZ', name: 'CIE XYZ', year: 1931, fn: wavelengthToRgb },
+            { id: 'sRGB', name: 'sRGB', year: 1996, fn: getSrgb },
             { id: 'UVW', name: 'CIE UVW', year: 1964, fn: uvwToRgb },
             { id: 'CIELUV', name: 'CIE LUV', year: 1976, fn: lchUvToRgb },
             { id: 'LCH', name: 'CIE LCH', year: 1976, fn: lchToRgb },
-            { id: 'HSLuv', name: 'HSLuv', year: 2015, fn: getHsluv },
-            { id: 'OKLCH', name: 'Oklch', year: 2020, fn: oklchToRgb }
+            { id: 'OKLCH', name: 'OkLCH', year: 2020, fn: oklchToRgb },
+            { id: 'HSLuv', name: 'HSLuv', year: 2015, fn: getHsluv }
         ];
 
         let activeSpaces = [...initialSpaces];
+        let sampleCacheKey = '';
+        const sampleCache = new Map();
 
-        function applyModifiers(rgb) {
+        function invalidateSampleCache() {
+            sampleCacheKey = '';
+            sampleCache.clear();
+        }
+
+        function applyModifiersRgb(rgb) {
             let [r, g, b] = rgb;
 
             // 1. Saturation
@@ -398,7 +472,92 @@
             let g8 = Math.round(g * 255);
             let b8 = Math.round(b * 255);
 
-            return `rgb(${r8}, ${g8}, ${b8})`;
+            return [r8, g8, b8];
+        }
+
+        function rgbString(rgb) {
+            return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        }
+
+        function rgbToHsl([r8, g8, b8]) {
+            let r = r8 / 255, g = g8 / 255, b = b8 / 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            const d = max - min;
+            let h = 0, s = 0, l = (max + min) / 2;
+            if (d) {
+                s = d / (1 - Math.abs(2 * l - 1));
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    default: h = ((r - g) / d + 4) / 6;
+                }
+            }
+            return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+        }
+
+        function rgbToCmyk([r8, g8, b8]) {
+            const r = r8 / 255, g = g8 / 255, b = b8 / 255;
+            const k = 1 - Math.max(r, g, b);
+            if (k >= 1) return [0, 0, 0, 100];
+            return [
+                Math.round((1 - r - k) / (1 - k) * 100),
+                Math.round((1 - g - k) / (1 - k) * 100),
+                Math.round((1 - b - k) / (1 - k) * 100),
+                Math.round(k * 100)
+            ];
+        }
+
+        function formatColor(rgb, format = state.format) {
+            const hex = rgb.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+            if (format === 'hex') return hex;
+            if (format === 'hashHex') return `#${hex}`;
+            if (format === 'rgb') return rgbString(rgb);
+            if (format === 'hsl') {
+                const [h, s, l] = rgbToHsl(rgb);
+                return `hsl(${h}, ${s}%, ${l}%)`;
+            }
+            const [c, m, y, k] = rgbToCmyk(rgb);
+            return `cmyk(${c}%, ${m}%, ${y}%, ${k}%)`;
+        }
+
+        function sampleSpace(space) {
+            const key = `${state.sat}|${state.tint}|${state.shade}|${state.tone}`;
+            if (key !== sampleCacheKey) {
+                sampleCacheKey = key;
+                sampleCache.clear();
+            }
+            if (!sampleCache.has(space.id)) {
+                sampleCache.set(space.id, Array.from({length: NUM_STOPS}, (_, i) => applyModifiersRgb(space.fn(i / NUM_STOPS))));
+            }
+            return sampleCache.get(space.id);
+        }
+
+        function hueOf(rgb) {
+            const [h, s] = rgbToHsl(rgb);
+            return {h, chroma: s};
+        }
+
+        function hueDistance(a, b) {
+            const distance = Math.abs(a - b);
+            return Math.min(distance, 360 - distance);
+        }
+
+        function getSelectionFor(space, t, targetRgb = null) {
+            const samples = sampleSpace(space);
+            if (state.selector !== 'closest' || !targetRgb) {
+                const index = Math.min(NUM_STOPS - 1, Math.max(0, Math.round(t * (NUM_STOPS - 1))));
+                return { index, rgb: samples[index] };
+            }
+            const targetHue = hueOf(targetRgb);
+            let bestIndex = 0, bestScore = Infinity;
+            samples.forEach((rgb, index) => {
+                const candidate = hueOf(rgb);
+                const score = targetHue.chroma < 3 || candidate.chroma < 3
+                    ? Math.hypot(rgb[0] - targetRgb[0], rgb[1] - targetRgb[1], rgb[2] - targetRgb[2])
+                    : hueDistance(candidate.h, targetHue.h);
+                if (score < bestScore) { bestScore = score; bestIndex = index; }
+            });
+            return { index: bestIndex, rgb: samples[bestIndex] };
         }
 
         function renderSpectrums() {
@@ -411,11 +570,11 @@
             activeSpaces.forEach((space, index) => {
                 // Generate gradient stops
                 let stops = '';
+                const samples = sampleSpace(space);
                 for (let i = 0; i <= NUM_STOPS; i++) {
-                    let t = i / NUM_STOPS;
-                    let baseRgb = space.fn(t);
-                    let finalColor = applyModifiers(baseRgb);
-                    stops += `<stop offset="${(t * 100).toFixed(2)}%" stop-color="${finalColor}" />`;
+                    const sample = samples[i % NUM_STOPS];
+                    let finalColor = rgbString(sample);
+                    stops += `<stop offset="${(i / NUM_STOPS * 100).toFixed(2)}%" stop-color="${finalColor}" />`;
                 }
 
                 // Render row (no vertical space / borders between displays)
@@ -432,7 +591,7 @@
                         </div>
                         
                         <!-- SVG Spectrum -->
-                        <div class="flex-1 min-w-0 relative spectrum-canvas cursor-crosshair">
+                        <div class="flex-1 min-w-0 relative spectrum-canvas cursor-crosshair" data-space-id="${space.id}">
                             <svg class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
                                 <defs>
                                     <linearGradient id="grad-${space.id}" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -447,6 +606,79 @@
             });
 
             wrapper.innerHTML = html;
+            fitRowHeights();
+            renderSelectorOverlays();
+        }
+
+        function fitRowHeights() {
+            const rows = document.querySelectorAll('.spectrum-row');
+            const available = scrollContainer ? scrollContainer.clientHeight : 0;
+            const height = available > rows.length * COMPACT_ROW_HEIGHT
+                ? Math.floor(available / Math.max(1, rows.length))
+                : COMPACT_ROW_HEIGHT;
+            rows.forEach(row => row.style.height = `${height}px`);
+        }
+
+        function setButtonGroup(selector, activeValue, activeClass = 'bg-blue-600') {
+            document.querySelectorAll(selector).forEach(button => {
+                const active = button.dataset.format === activeValue || button.dataset.selector === activeValue;
+                button.classList.toggle(activeClass, active);
+                button.classList.toggle('bg-gray-700', !active);
+            });
+        }
+
+        function renderSelectorOverlays(hover = null) {
+            document.querySelectorAll('.selector-marker, .selector-tooltip, .selector-path').forEach(el => el.remove());
+            if (!hover || state.selector === 'point') return;
+            const rows = [...document.querySelectorAll('.spectrum-row')];
+            const targetSpace = activeSpaces[hover.rowIndex];
+            const target = getSelectionFor(targetSpace, hover.t, null);
+            const targetRgb = target.rgb;
+            const selections = rows.map((row, rowIndex) => {
+                const canvas = row.querySelector('.spectrum-canvas');
+                const selection = getSelectionFor(activeSpaces[rowIndex], hover.t, state.selector === 'closest' ? targetRgb : null);
+                const x = (selection.index / (NUM_STOPS - 1)) * canvas.clientWidth;
+                return { row, canvas, selection, x };
+            });
+            if (state.selector === 'vertical') {
+                selections.forEach(({canvas, x, selection}) => addMarker(canvas, x, selection.rgb));
+            } else {
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.className.baseVal = 'selector-path';
+                svg.setAttribute('viewBox', `0 0 ${Math.max(1, wrapper.clientWidth)} ${Math.max(1, wrapper.clientHeight)}`);
+                const points = selections.map(({row, x}) => `${x + row.querySelector('.space-label').offsetWidth},${row.offsetTop + row.offsetHeight / 2}`).join(' ');
+                const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                polyline.setAttribute('points', points);
+                polyline.setAttribute('fill', 'none');
+                polyline.setAttribute('stroke', 'white');
+                polyline.setAttribute('stroke-width', '3');
+                polyline.setAttribute('stroke-dasharray', '5 3');
+                svg.appendChild(polyline);
+                wrapper.appendChild(svg);
+                selections.forEach(({canvas, x, selection}) => addMarker(canvas, x, selection.rgb));
+            }
+            state.hoverSelections = selections;
+        }
+
+        function addMarker(canvas, x, rgb) {
+            const marker = document.createElement('div');
+            marker.className = 'selector-marker';
+            marker.style.left = `${x}px`;
+            canvas.appendChild(marker);
+            const label = document.createElement('div');
+            label.className = 'selector-tooltip';
+            label.style.left = `${x}px`;
+            label.style.backgroundColor = rgbString(rgb);
+            const [r, g, b] = rgb;
+            label.style.color = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 128 ? '#000' : '#fff';
+            label.textContent = formatColor(rgb);
+            label._rgb = rgb;
+            canvas.appendChild(label);
+        }
+
+        function updateSelectedValues(selections) {
+            state.selectedValues = selections.map(({space, rgb}) => ({space, rgb}));
+            document.getElementById('selected-color').value = state.selectedValues.map(item => formatColor(item.rgb)).join('\n');
         }
 
         function updateSort() {
@@ -473,6 +705,7 @@
             input.addEventListener('input', (e) => {
                 const val = parseFloat(e.target.value);
                 state[id] = val;
+                invalidateSampleCache();
                 valDisplay.textContent = id === 'zoom' ? val.toFixed(1) + 'x' : val.toFixed(2);
                 renderSpectrums();
             });
@@ -487,9 +720,14 @@
         // Inverse Button Event
         document.getElementById('ctrl-inverse').addEventListener('click', (e) => {
             state.inverse = !state.inverse;
-            e.currentTarget.classList.toggle('bg-blue-600');
-            e.currentTarget.classList.toggle('bg-gray-700');
-            updateSort();
+            if (state.order === 'custom') {
+                activeSpaces.reverse();
+                renderSpectrums();
+            } else {
+                e.currentTarget.classList.toggle('bg-blue-600');
+                e.currentTarget.classList.toggle('bg-gray-700');
+                updateSort();
+            }
         });
 
         // Reset Zoom Event
@@ -511,6 +749,13 @@
             state.zoom = 1.0;
             state.order = 'default';
             state.inverse = false;
+            state.format = 'hex';
+            state.selector = 'point';
+            state.selectedValues = [];
+            document.getElementById('selected-color').value = '';
+            setButtonGroup('.format-button', state.format);
+            setButtonGroup('.selector-button', state.selector);
+            invalidateSampleCache();
             
             // Update UI sliders and readouts
             controls.forEach(id => {
@@ -537,6 +782,38 @@
         let startX;
         let scrollLeftPos;
         const tooltip = document.getElementById('color-tooltip');
+
+        window.addEventListener('resize', fitRowHeights);
+
+        document.querySelectorAll('.format-button').forEach(button => button.addEventListener('click', () => {
+            state.format = button.dataset.format;
+            setButtonGroup('.format-button', state.format);
+            document.querySelectorAll('.selector-tooltip').forEach(label => {
+                const marker = label.previousElementSibling;
+                if (marker) label.textContent = formatColor(label._rgb || [0, 0, 0]);
+            });
+            document.getElementById('selected-color').value = state.selectedValues.map(item => formatColor(item.rgb)).join('\n');
+            renderSelectorOverlays(state.lastHover);
+        }));
+
+        document.querySelectorAll('.selector-button').forEach(button => button.addEventListener('click', () => {
+            state.selector = button.dataset.selector;
+            setButtonGroup('.selector-button', state.selector);
+            renderSelectorOverlays(state.lastHover);
+        }));
+
+        document.getElementById('copy-color').addEventListener('click', async () => {
+            const field = document.getElementById('selected-color');
+            if (!field.value) return;
+            try {
+                await navigator.clipboard.writeText(field.value);
+                document.getElementById('selection-status').textContent = 'Copied';
+                setTimeout(() => document.getElementById('selection-status').textContent = '', 1200);
+            } catch (error) {
+                field.select();
+                document.getElementById('selection-status').textContent = 'Select and copy manually';
+            }
+        });
 
         // Panning and Tooltip Mouse Events
         wrapper.addEventListener('mousedown', (e) => {
@@ -574,78 +851,93 @@
                 const spaceIndex = parseInt(row.dataset.index);
                 const space = activeSpaces[spaceIndex];
                 
-                const baseRgb = space.fn(t);
-                const colorStr = applyModifiers(baseRgb);
+                const rgb = applyModifiersRgb(space.fn(t));
+                const colorStr = formatColor(rgb);
                 
                 tooltip.textContent = colorStr;
-                tooltip.style.backgroundColor = colorStr;
+                tooltip.style.backgroundColor = rgbString(rgb);
                 
                 // Text color contrast check
-                const [r, g, b] = colorStr.match(/\d+/g).map(Number);
+                const [r, g, b] = rgb;
                 const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
                 tooltip.style.color = luma > 128 ? '#000' : '#fff';
                 
                 tooltip.style.left = e.clientX + 'px';
                 tooltip.style.top = e.clientY + 'px';
                 tooltip.classList.remove('hidden');
+                state.lastHover = {t, rowIndex: spaceIndex};
+                if (state.selector !== 'point') {
+                    renderSelectorOverlays(state.lastHover);
+                    const target = getSelectionFor(activeSpaces[spaceIndex], t, null);
+                    const selections = activeSpaces.map((space, rowIndex) => {
+                        const selected = getSelectionFor(space, t, state.selector === 'closest' ? target.rgb : null);
+                        return {space, rgb: selected.rgb, rowIndex};
+                    });
+                    updateSelectedValues(selections);
+                }
             } else {
                 tooltip.classList.add('hidden');
             }
+        });
+
+        wrapper.addEventListener('click', (e) => {
+            const canvas = e.target.closest('.spectrum-canvas');
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const t = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const row = canvas.closest('.spectrum-row');
+            const rowIndex = parseInt(row.dataset.index);
+            const target = getSelectionFor(activeSpaces[rowIndex], t, null);
+            const selections = state.selector === 'point'
+                ? [{space: activeSpaces[rowIndex], rgb: target.rgb, rowIndex}]
+                : activeSpaces.map((space, index) => {
+                    const selected = getSelectionFor(space, t, state.selector === 'closest' ? target.rgb : null);
+                    return {space, rgb: selected.rgb, rowIndex: index};
+                });
+            state.selectedRgb = target.rgb;
+            updateSelectedValues(selections);
         });
 
         wrapper.addEventListener('mouseleave', () => {
             tooltip.classList.add('hidden');
         });
 
+        function zoomAtPointer(e, newZoom) {
+            const rect = scrollContainer.getBoundingClientRect();
+            const canvas = e.target.closest('.spectrum-canvas');
+            if (!canvas) return;
+            const canvasRect = canvas.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - canvasRect.left) / canvasRect.width));
+            const canvasStart = canvasRect.left - rect.left + scrollContainer.scrollLeft;
+            const pointerViewportX = e.clientX - rect.left;
+            state.zoom = newZoom;
+            document.getElementById('ctrl-zoom').value = state.zoom;
+            document.getElementById('val-zoom').textContent = state.zoom.toFixed(1) + 'x';
+            renderSpectrums();
+            const newCanvasWidth = document.querySelector('.spectrum-canvas').clientWidth;
+            const targetScroll = canvasStart + ratio * newCanvasWidth - pointerViewportX;
+            scrollContainer.scrollLeft = Math.max(0, targetScroll);
+            requestAnimationFrame(() => scrollContainer.scrollLeft = Math.max(0, targetScroll));
+        }
+
         // Zoom Control via Mouse Wheel (Pinch) and Double Click
         scrollContainer.addEventListener('wheel', (e) => {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
                 
-                const oldZoom = state.zoom;
                 let zoomChange = e.deltaY * -0.01;
-                state.zoom = Math.max(1, Math.min(10, state.zoom + zoomChange));
+                const newZoom = Math.max(1, Math.min(10, state.zoom + zoomChange));
                 
-                if (state.zoom === oldZoom) return;
-
-                const rect = scrollContainer.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const containerWidth = scrollContainer.clientWidth;
-                const pointRatio = (clickX + scrollContainer.scrollLeft) / (containerWidth * oldZoom);
-                
-                document.getElementById('ctrl-zoom').value = state.zoom;
-                document.getElementById('val-zoom').textContent = state.zoom.toFixed(1) + 'x';
-                renderSpectrums();
-                
-                // Centering math logic
-                const targetScroll = (pointRatio * containerWidth * state.zoom) - clickX;
-                scrollContainer.scrollLeft = targetScroll;
-                // Double check it applied correctly after DOM reflow
-                requestAnimationFrame(() => scrollContainer.scrollLeft = targetScroll);
+                if (newZoom === state.zoom) return;
+                zoomAtPointer(e, newZoom);
             }
         }, { passive: false });
 
         scrollContainer.addEventListener('dblclick', (e) => {
             if (e.target.closest('.spectrum-canvas')) {
-                const oldZoom = state.zoom;
-                state.zoom = state.zoom >= 10 ? 1 : Math.min(10, state.zoom + 2);
-                
-                if (state.zoom === oldZoom) return;
-
-                const rect = scrollContainer.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const containerWidth = scrollContainer.clientWidth;
-                const pointRatio = (clickX + scrollContainer.scrollLeft) / (containerWidth * oldZoom);
-                
-                document.getElementById('ctrl-zoom').value = state.zoom;
-                document.getElementById('val-zoom').textContent = state.zoom.toFixed(1) + 'x';
-                renderSpectrums();
-                
-                // Centering math logic
-                const targetScroll = (pointRatio * containerWidth * state.zoom) - clickX;
-                scrollContainer.scrollLeft = targetScroll;
-                // Double check it applied correctly after DOM reflow
-                requestAnimationFrame(() => scrollContainer.scrollLeft = targetScroll);
+                const newZoom = state.zoom >= 10 ? 1 : Math.min(10, state.zoom + 2);
+                if (newZoom === state.zoom) return;
+                zoomAtPointer(e, newZoom);
             }
         });
 
@@ -706,10 +998,59 @@
 
         const modal = document.getElementById('info-modal');
         const modalContent = document.getElementById('modal-content-box');
+        let modalSpace = null;
+
+        function exportFilename(space, extension) {
+            const safeName = space.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+            return `${safeName}_sat-${state.sat.toFixed(2)}_tint-${state.tint.toFixed(2)}_shade-${state.shade.toFixed(2)}_tone-${state.tone.toFixed(2)}.${extension}`;
+        }
+
+        function downloadBlob(blob, filename) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }
+
+        function saveSpace(space, format) {
+            const samples = sampleSpace(space);
+            const filename = exportFilename(space, format);
+            if (format === 'json') {
+                const payload = {
+                    name: space.name,
+                    sat: state.sat,
+                    tint: state.tint,
+                    shade: state.shade,
+                    tone: state.tone,
+                    colors: samples.map(rgb => formatColor(rgb))
+                };
+                downloadBlob(new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'}), filename);
+                return;
+            }
+            if (format === 'svg') {
+                const stops = samples.map((rgb, i) => `<stop offset="${(i / (NUM_STOPS - 1) * 100).toFixed(3)}%" stop-color="${rgbString(rgb)}"/>`).join('');
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${NUM_STOPS}" height="80" viewBox="0 0 ${NUM_STOPS} 80"><defs><linearGradient id="s" x1="0" x2="1" y1="0" y2="0">${stops}</linearGradient></defs><rect width="100%" height="100%" fill="url(#s)"/></svg>`;
+                downloadBlob(new Blob([svg], {type: 'image/svg+xml'}), filename);
+                return;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = NUM_STOPS;
+            canvas.height = 80;
+            const context = canvas.getContext('2d');
+            samples.forEach((rgb, i) => {
+                context.fillStyle = rgbString(rgb);
+                context.fillRect(i, 0, 1, canvas.height);
+            });
+            canvas.toBlob(blob => {
+                if (blob) downloadBlob(blob, filename);
+            }, 'image/png');
+        }
         
         function showModal(spaceId) {
             const space = initialSpaces.find(s => s.id === spaceId);
             if (!space) return;
+            modalSpace = space;
 
             document.getElementById('modal-title').textContent = space.name;
             document.getElementById('modal-body').innerHTML = spaceInfo[spaceId] || "Information not available.";
@@ -730,6 +1071,9 @@
         }
 
         document.getElementById('modal-close').addEventListener('click', hideModal);
+        document.getElementById('modal-save').addEventListener('click', () => {
+            if (modalSpace) saveSpace(modalSpace, document.getElementById('save-format').value);
+        });
         modal.addEventListener('click', (e) => {
             if (e.target === modal) hideModal();
         });
