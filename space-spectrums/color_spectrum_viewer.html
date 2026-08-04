@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Color Spectrum Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/colorjs.io/dist/color.global.js"></script>
     <style>
         /* Custom scrollbar for better aesthetics */
         ::-webkit-scrollbar {
@@ -48,6 +49,44 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             white-space: nowrap;
         }
+        #top-controls > summary::marker {
+            color: white;
+            font-size: 1rem;
+        }
+        #top-controls > summary {
+            display: list-item;
+        }
+        #top-controls > summary h1 {
+            display: inline;
+        }
+        .split-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 0.25rem);
+            min-width: 9rem;
+            z-index: 60;
+            background: #1f2937;
+            border: 1px solid #4b5563;
+            border-radius: 0.25rem;
+            padding: 0.25rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,.35);
+        }
+        .split-menu button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            color: white;
+            padding: 0.35rem 0.5rem;
+            border-radius: 0.2rem;
+        }
+        .split-menu button:hover,
+        .split-menu button.active {
+            background: #2563eb;
+        }
+        #save-menu {
+            top: auto;
+            bottom: calc(100% + 0.25rem);
+        }
         .grabbing {
             cursor: grabbing !important;
         }
@@ -55,7 +94,8 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 0;
+            width: 8px;
+            transform: translateX(-50%);
             border-left: 2px solid rgba(255,255,255,0.95);
             border-right: 2px solid rgba(0,0,0,0.8);
             pointer-events: none;
@@ -83,21 +123,56 @@
             z-index: 5;
             overflow: visible;
         }
+        .point-crosshair {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            border-left: 2px solid rgba(255,255,255,0.95);
+            border-right: 2px solid rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 5;
+        }
+        .point-crosshair::after {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 50%;
+            width: 12px;
+            border-top: 2px solid rgba(255,255,255,0.95);
+            border-bottom: 2px solid rgba(0,0,0,0.8);
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
 
     <!-- Top Control Panel -->
-    <div class="bg-gray-800 border-b border-gray-700 p-4 shrink-0 shadow-lg z-20">
+    <div id="top-control-panel" class="bg-gray-800 border-b border-gray-700 p-4 shrink-0 shadow-lg z-20">
         <div class="max-w-7xl mx-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h1 class="text-xl font-bold text-blue-400">Color Spectrum Viewer</h1>
-                <button id="btn-reset-all" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded shadow text-sm transition-colors">Reset All</button>
-            </div>
-            
-            <!-- Controls Grid -->
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
-                
+            <details id="top-controls" open class="relative">
+                    <summary class="cursor-pointer text-sm select-none" aria-label="Toggle controls">
+                        <h1 class="text-xl font-bold text-blue-400">Color Spectrum Viewer</h1>
+                    </summary>
+                    <div id="top-controls-panel">
+                        <div class="flex justify-end items-center gap-2 mb-3">
+                            <div class="relative">
+                                <button id="btn-spaces" type="button" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded shadow text-sm transition-colors">Spaces</button>
+                                <div id="spaces-popover" class="hidden absolute right-0 top-full mt-2 w-80 bg-gray-800 border border-gray-600 rounded shadow-2xl p-3 z-50">
+                                    <div class="flex flex-wrap gap-1 mb-3" id="space-groups"></div>
+                                    <div id="space-checkboxes" class="grid grid-cols-1 gap-1 max-h-72 overflow-y-auto"></div>
+                                </div>
+                            </div>
+                            <div class="relative flex">
+                                <button id="btn-reset-sliders" type="button" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded-l shadow text-sm transition-colors">Reset</button>
+                                <button id="reset-menu-button" type="button" class="bg-blue-700 hover:bg-blue-600 text-white px-2 py-1 rounded-r shadow text-sm" aria-label="Reset menu" aria-expanded="false">▼</button>
+                                <div id="reset-menu" class="split-menu hidden">
+                                    <button type="button" data-reset="all">Reset all</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Controls Grid -->
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
+
                 <div class="flex flex-col">
                     <label class="flex justify-between mb-1">
                         <span class="text-gray-300">Saturation</span>
@@ -156,12 +231,14 @@
                     </div>
                 </div>
             </div>
+            </div>
+            </details>
         </div>
     </div>
 
     <!-- Main Spectrum Container -->
-    <div class="flex-1 overflow-y-auto overflow-x-auto relative bg-gray-950">
-        <div id="spectrum-wrapper" class="flex flex-col min-w-full transition-all duration-150 ease-out">
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto relative bg-gray-950">
+        <div id="spectrum-wrapper" class="flex flex-col min-w-full transition-none">
             <!-- Spectrums will be injected here via JS -->
         </div>
     </div>
@@ -171,9 +248,9 @@
         <div class="max-w-7xl mx-auto flex flex-wrap items-center gap-2 text-sm">
             <div class="flex items-center gap-1" role="group" aria-label="Color format">
                 <span class="text-gray-400 mr-1">Format</span>
-                <button class="format-button bg-blue-600 text-white px-2 py-1 rounded" data-format="hex">HEX</button>
+                <button class="format-button bg-gray-700 text-white px-2 py-1 rounded" data-format="hex">HEX</button>
                 <button class="format-button bg-gray-700 text-white px-2 py-1 rounded" data-format="hashHex">#HEX</button>
-                <button class="format-button bg-gray-700 text-white px-2 py-1 rounded" data-format="rgb">RGB</button>
+                <button class="format-button bg-blue-600 text-white px-2 py-1 rounded" data-format="rgb">RGB</button>
                 <button class="format-button bg-gray-700 text-white px-2 py-1 rounded" data-format="hsl">HSL</button>
                 <button class="format-button bg-gray-700 text-white px-2 py-1 rounded" data-format="cmyk">CMYK</button>
             </div>
@@ -186,6 +263,17 @@
             <textarea id="selected-color" rows="1" readonly placeholder="Click a spectrum to select a color"
                    class="flex-1 min-w-[220px] max-h-20 bg-gray-900 border border-gray-600 rounded px-3 py-1 text-white font-mono focus:outline-none resize-y"></textarea>
             <button id="copy-color" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded">Copy</button>
+            <div id="save-control" class="relative flex">
+                <button id="save-all" class="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded-l">Save SVG</button>
+                <button id="save-menu-button" class="bg-green-700 hover:bg-green-600 text-white px-2 py-1 rounded-r" aria-label="Save format menu" aria-expanded="false">▼</button>
+                <div id="save-menu" class="split-menu hidden">
+                    <div class="px-2 py-1 text-xs text-gray-400">Save format</div>
+                    <button type="button" data-save-format="svg">SVG</button>
+                    <button type="button" data-save-format="png">PNG</button>
+                    <button type="button" data-save-format="webp">WebP</button>
+                    <button type="button" data-save-format="json">JSON</button>
+                </div>
+            </div>
             <span id="selection-status" class="text-xs text-gray-400" aria-live="polite"></span>
         </div>
     </div>
@@ -199,12 +287,17 @@
                 <!-- Content injected here -->
             </div>
             <div class="flex flex-wrap justify-end items-center gap-2">
-                <select id="save-format" class="bg-gray-700 text-white border border-gray-600 rounded px-2 py-2">
-                    <option value="svg">SVG</option>
-                    <option value="png">PNG</option>
-                    <option value="json">JSON</option>
-                </select>
-                <button id="modal-save" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded shadow transition-colors">Save</button>
+                <div id="modal-save-control" class="relative flex">
+                    <button id="modal-save" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-l shadow transition-colors">Save SVG</button>
+                    <button id="modal-save-menu-button" class="bg-green-700 hover:bg-green-600 text-white px-2 py-2 rounded-r shadow transition-colors" aria-label="Save format menu" aria-expanded="false">▼</button>
+                    <div id="modal-save-menu" class="split-menu hidden bottom-full top-auto mb-1">
+                        <div class="px-2 py-1 text-xs text-gray-400">Save format</div>
+                        <button type="button" data-save-format="svg">SVG</button>
+                        <button type="button" data-save-format="png">PNG</button>
+                        <button type="button" data-save-format="webp">WebP</button>
+                        <button type="button" data-save-format="json">JSON</button>
+                    </div>
+                </div>
                 <button id="modal-close" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded shadow transition-colors">
                     Close
                 </button>
@@ -222,11 +315,19 @@
             order: 'default',
             inverse: false,
             draggedItemIndex: null,
-            format: 'hex',
+            format: 'rgb',
             selector: 'point',
             selectedRgb: null,
-            selectedValues: []
+            selectedValues: [],
+            selectionPinned: false,
+            lastHover: null,
+            enabledIds: null,
+            exportFormat: 'svg',
+            controlsOpen: true
         };
+
+        const STORAGE_KEY = 'color-spectrum-viewer-state-v4';
+        let suppressPersistence = false;
 
         const NUM_STOPS = 360;
         const COMPACT_ROW_HEIGHT = 64;
@@ -234,13 +335,16 @@
         // Information text for each space
         const spaceInfo = {
             sRGB: "<b>sRGB (Standard RGB) (1996)</b><br>The standard color space for the web. Interpolating hue fully saturates the primary and secondary vertices of the RGB cube. Visually identical to basic HSL/HSV sweeps at max saturation.",
-            XYZ: "<b>CIE 1931 XYZ (1931)</b><br>The foundational color space mapping human vision. Displayed here as a sweep of physical wavelengths (approx 780nm to 380nm) across the visible spectrum.",
+            XYZ: "<b>CIE 1931 XYZ (1931)</b><br>The foundational color space mapping human vision. Displayed here as a balanced chromaticity-plane sweep converted through a full color-management pipeline.",
             UVW: "<b>CIE 1964 UVW (1964)</b><br>An early attempt at a perceptually uniform color space. Sweeping the chromaticity plane creates a different distribution of hues compared to standard RGB.",
             CIELAB: "<b>CIE LAB (1976)</b><br>A perceptually uniform space designed to approximate human vision. Displayed here via its cylindrical LCH coordinate system.",
             CIELUV: "<b>CIE LUV (1976)</b><br>Another perceptually uniform space from 1976, heavily used for displays. Swept via its cylindrical LCHuv coordinates.",
             HSLuv: "<b>HSLuv (2015)</b><br>A human-friendly alternative to HSL, based on the CIELUV color space. It maintains perceptual uniformity, preventing the harsh luminance shifts seen in standard HSL.",
             OKLCH: "<b>Oklch (Perceptual) (2020)</b><br>A modern perceptually uniform color space. Sweeps through Hue angles while maintaining a constant Lightness and Chroma, preserving perceived brightness flawlessly.",
-            LCH: "<b>CIE L*C*h° (1976)</b><br>A cylindrical representation of the CIELAB color space. Sweeping Hue maintains perceived lightness and chroma, though it exhibits slight blue-to-purple hue shifts compared to Oklch."
+            LCH: "<b>CIE L*C*h° (1976)</b><br>A cylindrical representation of the CIELAB color space. Sweeping Hue maintains perceived lightness and chroma, though it exhibits slight blue-to-purple hue shifts compared to Oklch.",
+            ICTCP: "<b>ICtCp (HDR)</b><br>An HDR color space from Rec. 2100 using perceptual quantization and designed for high dynamic range image and video signals.",
+            Jzazbz: "<b>Jzazbz (HDR)</b><br>A perceptually oriented HDR color space designed to improve uniformity for very bright colors.",
+            CAM16UCS: "<b>CAM16-UCS</b><br>A uniform color space derived from the CIECAM16 appearance model under defined viewing conditions."
         };
 
         
@@ -411,20 +515,99 @@
              return [gamma(r_lin), gamma(g_lin), gamma(b_lin)];
         }
 
-        // Base spaces definition. This order is the viewer's default order.
+        function colorJsRgb(spaceId, coords) {
+            try {
+                const color = new Color(spaceId, coords).to('srgb').toGamut({method: 'css'});
+                const values = color.coords || color.toJSON().coords;
+                return values.map(value => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0)));
+            } catch (error) {
+                return [0, 0, 0];
+            }
+        }
+
+        function cam16UcsToRgb(t) {
+            const h = t * 360;
+            const jPrime = 55;
+            const mPrime = 42;
+            const j = jPrime / (1.7 - 0.007 * jPrime);
+            const m = (Math.exp(0.0228 * mPrime) - 1) / 0.0228;
+            return colorJsRgb('cam16-jmh', [j, m, h]);
+        }
+
+        function xyzSweep(t) {
+            const angle = t * Math.PI * 2;
+            // A balanced chromaticity-plane sweep avoids the coarse red block
+            // produced by the old wavelength-to-RGB approximation.
+            return colorJsRgb('xyz-d65', [0.45 + 0.32 * Math.cos(angle), 0.55, 0.45 + 0.32 * Math.sin(angle)]);
+        }
+
+        function colorJsHueSweep(spaceId, t, coords) {
+            const angle = t * Math.PI * 2;
+            return colorJsRgb(spaceId, coords(angle));
+        }
+
+        // Default order and complete space catalog.
         const initialSpaces = [
-            { id: 'XYZ', name: 'CIE XYZ', year: 1931, fn: wavelengthToRgb },
-            { id: 'sRGB', name: 'sRGB', year: 1996, fn: getSrgb },
-            { id: 'UVW', name: 'CIE UVW', year: 1964, fn: uvwToRgb },
-            { id: 'CIELUV', name: 'CIE LUV', year: 1976, fn: lchUvToRgb },
-            { id: 'LCH', name: 'CIE LCH', year: 1976, fn: lchToRgb },
-            { id: 'OKLCH', name: 'OkLCH', year: 2020, fn: oklchToRgb },
-            { id: 'HSLuv', name: 'HSLuv', year: 2015, fn: getHsluv }
+            { id: 'sRGB', name: 'sRGB', year: 1996, groups: ['Default', 'SDR', 'RGB'], fn: t => colorJsRgb('srgb', [getSrgb(t)[0], getSrgb(t)[1], getSrgb(t)[2]]), url: 'https://colorjs.io/docs/spaces#srgb' },
+            { id: 'XYZ', name: 'CIE XYZ', year: 1931, groups: ['Default', 'SDR', 'CIE'], fn: t => xyzSweep(1 - t), url: 'https://colorjs.io/docs/spaces#xyz-d65' },
+            { id: 'UVW', name: 'CIE UVW', year: 1964, groups: ['Default', 'SDR', 'CIE'], fn: t => colorJsRgb('xyz-d65', [0.45 + 0.25 * Math.cos((1 - t) * Math.PI * 2), 0.5, 0.5 + 0.25 * Math.sin((1 - t) * Math.PI * 2)]), url: 'https://en.wikipedia.org/wiki/CIELUV' },
+            { id: 'CIELUV', name: 'CIE LUV', year: 1976, groups: ['Default', 'SDR', 'CIE', 'Perceptual'], fn: t => colorJsHueSweep('lchuv', t, a => [70, 60, a * 180 / Math.PI]), url: 'https://colorjs.io/docs/spaces#luv' },
+            { id: 'LCH', name: 'CIE LCH', year: 1976, groups: ['Default', 'SDR', 'CIE', 'Perceptual'], fn: t => colorJsHueSweep('lch', t, a => [70, 60, a * 180 / Math.PI]), url: 'https://colorjs.io/docs/spaces#lch' },
+            { id: 'OKLCH', name: 'OkLCH', year: 2020, groups: ['Default', 'SDR', 'Perceptual'], fn: t => colorJsHueSweep('oklch', t, a => [0.7, 0.18, a * 180 / Math.PI]), url: 'https://www.w3.org/TR/css-color-4/#ok-lab' },
+            { id: 'HSLuv', name: 'HSLuv', year: 2015, groups: ['Default', 'SDR', 'Perceptual'], fn: t => colorJsRgb('hsluv', [t * 360, 100, 50]), url: 'https://www.hsluv.org/' },
+            { id: 'ICTCP', name: 'CIE ICtCp', year: 2016, groups: ['HDR', 'Perceptual'], fn: t => colorJsHueSweep('ictcp', t, a => [0.5, 0.22 * Math.cos(a), 0.22 * Math.sin(a)]), url: 'https://colorjs.io/docs/spaces#ictcp' },
+            { id: 'Jzazbz', name: 'Jzazbz', year: 2017, groups: ['HDR', 'Perceptual'], fn: t => colorJsHueSweep('jzazbz', t, a => [0.05, 0.03 * Math.cos(a), 0.03 * Math.sin(a)]), url: 'https://colorjs.io/docs/spaces#jzazbz' },
+            { id: 'CAM16UCS', name: 'CAM16-UCS', year: 2016, groups: ['HDR', 'Perceptual', 'CIE'], fn: cam16UcsToRgb, url: 'https://www.cie.co.at/technicalcommittees/recommend-cam16-ucs-cie-uniform-colour-space' }
         ];
 
         let activeSpaces = [...initialSpaces];
+        let fullSpaceOrder = [...initialSpaces];
         let sampleCacheKey = '';
         const sampleCache = new Map();
+
+        function enabledSpaceIds() {
+            return state.enabledIds || initialSpaces.filter(space => space.groups.includes('Default')).map(space => space.id);
+        }
+
+        function rebuildActiveSpaces() {
+            const enabled = new Set(enabledSpaceIds());
+            activeSpaces = fullSpaceOrder.filter(space => enabled.has(space.id));
+            if (!activeSpaces.length) {
+                const first = initialSpaces[0];
+                state.enabledIds = [first.id];
+                activeSpaces = [first];
+            }
+        }
+
+        function persistState() {
+            if (suppressPersistence) return;
+            const data = {
+                sat: state.sat, tint: state.tint, shade: state.shade, tone: state.tone,
+                zoom: state.zoom, order: state.order, inverse: state.inverse,
+                format: state.format, selector: state.selector, selectionPinned: state.selectionPinned,
+                lastHover: state.lastHover, enabledIds: enabledSpaceIds(), exportFormat: state.exportFormat,
+                controlsOpen: state.controlsOpen, fullSpaceOrder: fullSpaceOrder.map(space => space.id)
+            };
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (error) { /* file: origins may disable storage */ }
+        }
+
+        function restoreState() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+                if (!saved) return;
+                ['sat', 'tint', 'shade', 'tone', 'zoom', 'order', 'inverse', 'format', 'selector', 'selectionPinned', 'lastHover', 'exportFormat', 'controlsOpen'].forEach(key => {
+                    if (saved[key] !== undefined) state[key] = saved[key];
+                });
+                if (Array.isArray(saved.enabledIds)) state.enabledIds = saved.enabledIds;
+                if (Array.isArray(saved.fullSpaceOrder)) {
+                    const byId = new Map(initialSpaces.map(space => [space.id, space]));
+                    fullSpaceOrder = saved.fullSpaceOrder.map(id => byId.get(id)).filter(Boolean);
+                    initialSpaces.forEach(space => { if (!fullSpaceOrder.includes(space)) fullSpaceOrder.push(space); });
+                }
+            } catch (error) {
+                try { localStorage.removeItem(STORAGE_KEY); } catch (ignored) { }
+            }
+        }
 
         function invalidateSampleCache() {
             sampleCacheKey = '';
@@ -607,7 +790,8 @@
 
             wrapper.innerHTML = html;
             fitRowHeights();
-            renderSelectorOverlays();
+            renderSelectorOverlays(state.lastHover);
+            refreshPinnedPointTooltip();
         }
 
         function fitRowHeights() {
@@ -629,7 +813,19 @@
 
         function renderSelectorOverlays(hover = null) {
             document.querySelectorAll('.selector-marker, .selector-tooltip, .selector-path').forEach(el => el.remove());
-            if (!hover || state.selector === 'point') return;
+            document.querySelectorAll('.point-crosshair').forEach(el => el.remove());
+            if (!hover) return;
+            if (state.selector === 'point') {
+                if (state.selectionPinned && activeSpaces[hover.rowIndex]) {
+                    const row = document.querySelector(`.spectrum-row[data-index="${hover.rowIndex}"]`);
+                    if (row) {
+                        const canvas = row.querySelector('.spectrum-canvas');
+                        const selection = getSelectionFor(activeSpaces[hover.rowIndex], hover.t, null);
+                        addPointCrosshair(canvas, selection.index / (NUM_STOPS - 1) * canvas.clientWidth);
+                    }
+                }
+                return;
+            }
             const rows = [...document.querySelectorAll('.spectrum-row')];
             const targetSpace = activeSpaces[hover.rowIndex];
             const target = getSelectionFor(targetSpace, hover.t, null);
@@ -640,13 +836,21 @@
                 const x = (selection.index / (NUM_STOPS - 1)) * canvas.clientWidth;
                 return { row, canvas, selection, x };
             });
-            if (state.selector === 'vertical') {
-                selections.forEach(({canvas, x, selection}) => addMarker(canvas, x, selection.rgb));
-            } else {
+            const markerElements = selections.map(({canvas, x, selection}) => addMarker(canvas, x, selection.rgb));
+            if (state.selector === 'closest') {
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 svg.className.baseVal = 'selector-path';
-                svg.setAttribute('viewBox', `0 0 ${Math.max(1, wrapper.clientWidth)} ${Math.max(1, wrapper.clientHeight)}`);
-                const points = selections.map(({row, x}) => `${x + row.querySelector('.space-label').offsetWidth},${row.offsetTop + row.offsetHeight / 2}`).join(' ');
+                const wrapperRect = wrapper.getBoundingClientRect();
+                const points = selections.map(({row}, index) => {
+                    const markerRect = markerElements[index].getBoundingClientRect();
+                    const rowRect = row.getBoundingClientRect();
+                    return `${markerRect.left - wrapperRect.left + markerRect.width / 2},${rowRect.top - wrapperRect.top + rowRect.height / 2}`;
+                }).join(' ');
+                const pathWidth = Math.max(1, wrapper.scrollWidth);
+                const pathHeight = Math.max(1, wrapper.scrollHeight);
+                svg.setAttribute('viewBox', `0 0 ${pathWidth} ${pathHeight}`);
+                svg.style.width = `${pathWidth}px`;
+                svg.style.height = `${pathHeight}px`;
                 const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
                 polyline.setAttribute('points', points);
                 polyline.setAttribute('fill', 'none');
@@ -655,7 +859,6 @@
                 polyline.setAttribute('stroke-dasharray', '5 3');
                 svg.appendChild(polyline);
                 wrapper.appendChild(svg);
-                selections.forEach(({canvas, x, selection}) => addMarker(canvas, x, selection.rgb));
             }
             state.hoverSelections = selections;
         }
@@ -674,26 +877,43 @@
             label.textContent = formatColor(rgb);
             label._rgb = rgb;
             canvas.appendChild(label);
+            const canvasRect = canvas.getBoundingClientRect();
+            let labelRect = label.getBoundingClientRect();
+            let correctedX = x;
+            if (labelRect.left < canvasRect.left) correctedX += canvasRect.left - labelRect.left;
+            if (labelRect.right > canvasRect.right) correctedX -= labelRect.right - canvasRect.right;
+            label.style.left = `${Math.max(0, Math.min(canvas.clientWidth, correctedX))}px`;
+            return marker;
+        }
+
+        function addPointCrosshair(canvas, x) {
+            const crosshair = document.createElement('div');
+            crosshair.className = 'point-crosshair';
+            crosshair.style.left = `${x}px`;
+            canvas.appendChild(crosshair);
         }
 
         function updateSelectedValues(selections) {
             state.selectedValues = selections.map(({space, rgb}) => ({space, rgb}));
-            document.getElementById('selected-color').value = state.selectedValues.map(item => formatColor(item.rgb)).join('\n');
+            const separator = state.selector === 'point' ? '\n' : '; ';
+            document.getElementById('selected-color').value = state.selectedValues.map(item => formatColor(item.rgb)).join(separator);
         }
 
         function updateSort() {
             if (state.order === 'default') {
-                activeSpaces = [...initialSpaces];
+                fullSpaceOrder = [...initialSpaces];
             } else if (state.order === 'alpha') {
-                activeSpaces = [...initialSpaces].sort((a, b) => a.name.localeCompare(b.name));
+                fullSpaceOrder = [...initialSpaces].sort((a, b) => a.name.localeCompare(b.name));
             } else if (state.order === 'date') {
-                activeSpaces = [...initialSpaces].sort((a, b) => a.year - b.year);
+                fullSpaceOrder = [...initialSpaces].sort((a, b) => a.year - b.year);
             }
             // If custom, we leave activeSpaces as is (it remembers its order)
             
             if (state.inverse && state.order !== 'custom') {
-                activeSpaces.reverse();
+                fullSpaceOrder.reverse();
             }
+            rebuildActiveSpaces();
+            persistState();
             renderSpectrums();
         }
 
@@ -708,6 +928,7 @@
                 invalidateSampleCache();
                 valDisplay.textContent = id === 'zoom' ? val.toFixed(1) + 'x' : val.toFixed(2);
                 renderSpectrums();
+                persistState();
             });
         });
 
@@ -721,7 +942,9 @@
         document.getElementById('ctrl-inverse').addEventListener('click', (e) => {
             state.inverse = !state.inverse;
             if (state.order === 'custom') {
-                activeSpaces.reverse();
+                fullSpaceOrder.reverse();
+                rebuildActiveSpaces();
+                persistState();
                 renderSpectrums();
             } else {
                 e.currentTarget.classList.toggle('bg-blue-600');
@@ -737,41 +960,76 @@
             document.getElementById('val-zoom').textContent = state.zoom.toFixed(1) + 'x';
             renderSpectrums();
             scrollContainer.scrollLeft = 0;
+            persistState();
         });
 
-        // Reset All Settings Event
-        document.getElementById('btn-reset-all').addEventListener('click', () => {
-            // Reset state
+        function resetSliders() {
             state.sat = 1.0;
             state.tint = 0.0;
             state.shade = 0.0;
             state.tone = 0.0;
             state.zoom = 1.0;
-            state.order = 'default';
-            state.inverse = false;
-            state.format = 'hex';
-            state.selector = 'point';
-            state.selectedValues = [];
-            document.getElementById('selected-color').value = '';
-            setButtonGroup('.format-button', state.format);
-            setButtonGroup('.selector-button', state.selector);
             invalidateSampleCache();
-            
-            // Update UI sliders and readouts
             controls.forEach(id => {
                 const val = state[id];
                 document.getElementById(`ctrl-${id}`).value = val;
                 document.getElementById(`val-${id}`).textContent = id === 'zoom' ? val.toFixed(1) + 'x' : val.toFixed(2);
             });
-            
+            renderSpectrums();
+            scrollContainer.scrollLeft = 0;
+            persistState();
+        }
+
+        function resetEverything() {
+            resetSliders();
+            state.order = 'default';
+            state.inverse = false;
+            state.format = 'rgb';
+            state.selector = 'point';
+            state.selectedValues = [];
+            state.selectionPinned = false;
+            state.lastHover = null;
+            state.enabledIds = null;
+            state.exportFormat = 'svg';
+            state.controlsOpen = true;
+            fullSpaceOrder = [...initialSpaces];
+            try { localStorage.removeItem(STORAGE_KEY); } catch (ignored) { }
+            document.getElementById('selected-color').value = '';
+            setButtonGroup('.format-button', state.format);
+            setButtonGroup('.selector-button', state.selector);
+            updateSaveButtons();
+            renderSpacesPopover();
             // Update Order Dropdown and Inverse Button
             document.getElementById('ctrl-order').value = 'default';
             document.getElementById('ctrl-inverse').classList.remove('bg-blue-600');
             document.getElementById('ctrl-inverse').classList.add('bg-gray-700');
             
             // Reset Pan and re-render
+            suppressPersistence = true;
             updateSort();
+            suppressPersistence = false;
+            document.getElementById('top-controls').open = true;
             scrollContainer.scrollLeft = 0;
+        }
+
+        document.getElementById('btn-reset-sliders').addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            resetSliders();
+        });
+        document.getElementById('reset-menu-button').addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const menu = document.getElementById('reset-menu');
+            menu.classList.toggle('hidden');
+            event.currentTarget.setAttribute('aria-expanded', String(!menu.classList.contains('hidden')));
+        });
+        document.querySelector('#reset-menu [data-reset="all"]').addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            resetEverything();
+            document.getElementById('reset-menu').classList.add('hidden');
+            document.getElementById('reset-menu-button').setAttribute('aria-expanded', 'false');
         });
 
         const wrapper = document.getElementById('spectrum-wrapper');
@@ -783,6 +1041,38 @@
         let scrollLeftPos;
         const tooltip = document.getElementById('color-tooltip');
 
+        function displayTooltip(rgb, x, y, pinned = false) {
+            const colorStr = formatColor(rgb);
+            tooltip.textContent = colorStr;
+            tooltip.style.backgroundColor = rgbString(rgb);
+            const [r, g, b] = rgb;
+            const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            tooltip.style.color = luma > 128 ? '#000' : '#fff';
+            tooltip.style.transform = pinned ? 'translateY(-50%)' : 'translate(15px, 15px)';
+            tooltip.classList.remove('hidden');
+            const viewport = scrollContainer.getBoundingClientRect();
+            const firstLabel = document.querySelector('.space-label');
+            const minX = viewport.left + (firstLabel ? firstLabel.getBoundingClientRect().width : 0) + 2;
+            const maxX = Math.max(minX, viewport.right - tooltip.offsetWidth - 2);
+            const desiredLeft = pinned ? x + 15 : x;
+            const left = pinned
+                ? Math.max(minX, Math.min(maxX, desiredLeft))
+                : Math.max(minX - 15, Math.min(maxX - 15, desiredLeft));
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${y}px`;
+        }
+
+        function refreshPinnedPointTooltip() {
+            if (!state.selectionPinned || state.selector !== 'point' || !state.lastHover) return;
+            const row = document.querySelector(`.spectrum-row[data-index="${state.lastHover.rowIndex}"]`);
+            const crosshair = row?.querySelector('.point-crosshair');
+            if (!row || !crosshair) return;
+            const selection = getSelectionFor(activeSpaces[state.lastHover.rowIndex], state.lastHover.t, null);
+            const rowRect = row.getBoundingClientRect();
+            const crosshairRect = crosshair.getBoundingClientRect();
+            displayTooltip(selection.rgb, crosshairRect.left, rowRect.top + rowRect.height / 2, true);
+        }
+
         window.addEventListener('resize', fitRowHeights);
 
         document.querySelectorAll('.format-button').forEach(button => button.addEventListener('click', () => {
@@ -792,14 +1082,19 @@
                 const marker = label.previousElementSibling;
                 if (marker) label.textContent = formatColor(label._rgb || [0, 0, 0]);
             });
-            document.getElementById('selected-color').value = state.selectedValues.map(item => formatColor(item.rgb)).join('\n');
+            const separator = state.selector === 'point' ? '\n' : '; ';
+            document.getElementById('selected-color').value = state.selectedValues.map(item => formatColor(item.rgb)).join(separator);
             renderSelectorOverlays(state.lastHover);
+            persistState();
         }));
 
         document.querySelectorAll('.selector-button').forEach(button => button.addEventListener('click', () => {
             state.selector = button.dataset.selector;
             setButtonGroup('.selector-button', state.selector);
             renderSelectorOverlays(state.lastHover);
+            const separator = state.selector === 'point' ? '\n' : '; ';
+            document.getElementById('selected-color').value = state.selectedValues.map(item => formatColor(item.rgb)).join(separator);
+            persistState();
         }));
 
         document.getElementById('copy-color').addEventListener('click', async () => {
@@ -838,6 +1133,7 @@
                 const walk = (x - startX) * 1.5; // Panning speed multiplier
                 scrollContainer.scrollLeft = scrollLeftPos - walk;
             }
+            if (state.selectionPinned) return;
             
             // Tooltip processing
             const canvas = e.target.closest('.spectrum-canvas');
@@ -852,19 +1148,12 @@
                 const space = activeSpaces[spaceIndex];
                 
                 const rgb = applyModifiersRgb(space.fn(t));
-                const colorStr = formatColor(rgb);
                 
-                tooltip.textContent = colorStr;
-                tooltip.style.backgroundColor = rgbString(rgb);
-                
-                // Text color contrast check
-                const [r, g, b] = rgb;
-                const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                tooltip.style.color = luma > 128 ? '#000' : '#fff';
-                
-                tooltip.style.left = e.clientX + 'px';
-                tooltip.style.top = e.clientY + 'px';
-                tooltip.classList.remove('hidden');
+                if (state.selector === 'point') {
+                    displayTooltip(rgb, e.clientX, e.clientY, false);
+                } else {
+                    tooltip.classList.add('hidden');
+                }
                 state.lastHover = {t, rowIndex: spaceIndex};
                 if (state.selector !== 'point') {
                     renderSelectorOverlays(state.lastHover);
@@ -887,6 +1176,15 @@
             const t = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             const row = canvas.closest('.spectrum-row');
             const rowIndex = parseInt(row.dataset.index);
+            if (state.selectionPinned) {
+                state.selectionPinned = false;
+                persistState();
+                tooltip.style.transform = 'translate(15px, 15px)';
+                tooltip.classList.add('hidden');
+                state.lastHover = {t, rowIndex};
+                renderSelectorOverlays(state.lastHover);
+                return;
+            }
             const target = getSelectionFor(activeSpaces[rowIndex], t, null);
             const selections = state.selector === 'point'
                 ? [{space: activeSpaces[rowIndex], rgb: target.rgb, rowIndex}]
@@ -895,29 +1193,43 @@
                     return {space, rgb: selected.rgb, rowIndex: index};
                 });
             state.selectedRgb = target.rgb;
+            state.selectionPinned = true;
+            state.lastHover = {t, rowIndex};
             updateSelectedValues(selections);
+            renderSelectorOverlays(state.lastHover);
+            if (state.selector === 'point') {
+                const selectedRow = row.getBoundingClientRect();
+                displayTooltip(target.rgb, e.clientX, selectedRow.top + selectedRow.height / 2, true);
+            }
+            persistState();
         });
 
         wrapper.addEventListener('mouseleave', () => {
-            tooltip.classList.add('hidden');
+            if (!state.selectionPinned) tooltip.classList.add('hidden');
         });
 
         function zoomAtPointer(e, newZoom) {
             const rect = scrollContainer.getBoundingClientRect();
             const canvas = e.target.closest('.spectrum-canvas');
             if (!canvas) return;
-            const canvasRect = canvas.getBoundingClientRect();
-            const ratio = Math.max(0, Math.min(1, (e.clientX - canvasRect.left) / canvasRect.width));
-            const canvasStart = canvasRect.left - rect.left + scrollContainer.scrollLeft;
             const pointerViewportX = e.clientX - rect.left;
+            const labelWidth = canvas.closest('.spectrum-row').querySelector('.space-label').offsetWidth;
+            const oldSpectrumWidth = Math.max(1, wrapper.scrollWidth - labelWidth);
+            const pointerContentX = pointerViewportX + scrollContainer.scrollLeft;
+            const ratio = Math.max(0, Math.min(1, (pointerContentX - labelWidth) / oldSpectrumWidth));
             state.zoom = newZoom;
             document.getElementById('ctrl-zoom').value = state.zoom;
             document.getElementById('val-zoom').textContent = state.zoom.toFixed(1) + 'x';
             renderSpectrums();
-            const newCanvasWidth = document.querySelector('.spectrum-canvas').clientWidth;
-            const targetScroll = canvasStart + ratio * newCanvasWidth - pointerViewportX;
+            const newSpectrumWidth = Math.max(1, wrapper.scrollWidth - labelWidth);
+            const targetScroll = labelWidth + ratio * newSpectrumWidth - pointerViewportX;
             scrollContainer.scrollLeft = Math.max(0, targetScroll);
-            requestAnimationFrame(() => scrollContainer.scrollLeft = Math.max(0, targetScroll));
+            refreshPinnedPointTooltip();
+            requestAnimationFrame(() => {
+                scrollContainer.scrollLeft = Math.max(0, targetScroll);
+                refreshPinnedPointTooltip();
+            });
+            persistState();
         }
 
         // Zoom Control via Mouse Wheel (Pinch) and Double Click
@@ -992,6 +1304,10 @@
             if (targetIndex !== state.draggedItemIndex && state.draggedItemIndex !== null) {
                 const item = activeSpaces.splice(state.draggedItemIndex, 1)[0];
                 activeSpaces.splice(targetIndex, 0, item);
+                const enabled = new Set(enabledSpaceIds());
+                let activeIndex = 0;
+                fullSpaceOrder = fullSpaceOrder.map(space => enabled.has(space.id) ? activeSpaces[activeIndex++] : space);
+                persistState();
                 renderSpectrums();
             }
         });
@@ -1013,38 +1329,118 @@
             setTimeout(() => URL.revokeObjectURL(link.href), 1000);
         }
 
-        function saveSpace(space, format) {
-            const samples = sampleSpace(space);
-            const filename = exportFilename(space, format);
+        function exportPayload(space) {
+            return {
+                name: space.name,
+                sat: state.sat,
+                tint: state.tint,
+                shade: state.shade,
+                tone: state.tone,
+                colors: sampleSpace(space).map(rgb => formatColor(rgb))
+            };
+        }
+
+        function exportSelectionFor(space, index) {
+            if (!state.selectionPinned || !state.lastHover) return null;
+            const target = getSelectionFor(activeSpaces[state.lastHover.rowIndex] || space, state.lastHover.t, null);
+            return getSelectionFor(space, state.lastHover.t, state.selector === 'closest' ? target.rgb : null);
+        }
+
+        function escapeXml(value) {
+            return String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[character]));
+        }
+
+        function saveSpaceCollection(spaces, format, filenameBase, includeSelection = false, includeLabels = spaces.length > 1) {
+            if (!spaces.length) return;
             if (format === 'json') {
-                const payload = {
-                    name: space.name,
-                    sat: state.sat,
-                    tint: state.tint,
-                    shade: state.shade,
-                    tone: state.tone,
-                    colors: samples.map(rgb => formatColor(rgb))
-                };
-                downloadBlob(new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'}), filename);
+                const payload = spaces.map(exportPayload);
+                downloadBlob(new Blob([JSON.stringify(payload.length === 1 ? payload[0] : payload, null, 2)], {type: 'application/json'}), `${filenameBase}.json`);
                 return;
             }
+            const firstRow = document.querySelector('.spectrum-row');
+            const rowHeight = firstRow ? firstRow.clientHeight : COMPACT_ROW_HEIGHT;
+            const width = Math.max(1, scrollContainer.clientWidth);
+            const labelWidth = includeLabels && firstRow ? firstRow.querySelector('.space-label').clientWidth : 0;
+            const gradientWidth = Math.max(1, width - labelWidth);
+            const height = Math.max(1, rowHeight * spaces.length);
+            const selectionLines = [];
+            if (includeSelection && state.selectionPinned && state.lastHover) {
+                spaces.forEach((space, index) => {
+                    const selection = exportSelectionFor(space, index);
+                    if (selection) selectionLines.push({
+                        x: selection.index / (NUM_STOPS - 1) * gradientWidth + labelWidth,
+                        y: index * rowHeight + rowHeight / 2,
+                        value: formatColor(selection.rgb)
+                    });
+                });
+            }
+            const exportLabels = selectionLines.map(line => ({
+                ...line,
+                width: Math.max(84, line.value.length * 6.8 + 14),
+            }));
+            exportLabels.forEach(line => {
+                line.labelX = Math.max(line.width / 2, Math.min(width - line.width / 2, line.x));
+            });
             if (format === 'svg') {
-                const stops = samples.map((rgb, i) => `<stop offset="${(i / (NUM_STOPS - 1) * 100).toFixed(3)}%" stop-color="${rgbString(rgb)}"/>`).join('');
-                const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${NUM_STOPS}" height="80" viewBox="0 0 ${NUM_STOPS} 80"><defs><linearGradient id="s" x1="0" x2="1" y1="0" y2="0">${stops}</linearGradient></defs><rect width="100%" height="100%" fill="url(#s)"/></svg>`;
-                downloadBlob(new Blob([svg], {type: 'image/svg+xml'}), filename);
+                const defs = spaces.map((space, index) => {
+                    const stops = sampleSpace(space).map((rgb, i) => `<stop offset="${(i / (NUM_STOPS - 1) * 100).toFixed(3)}%" stop-color="${rgbString(rgb)}"/>`).join('');
+                    return `<linearGradient id="g${index}" x1="0" x2="1" y1="0" y2="0">${stops}</linearGradient>`;
+                }).join('');
+                const rows = spaces.map((space, index) => `${includeLabels ? `<rect width="${labelWidth}" height="${rowHeight}" y="${index * rowHeight}" fill="#111827"/><text x="${labelWidth - 12}" text-anchor="end" y="${index * rowHeight + rowHeight / 2 + 5}" fill="white" font-family="sans-serif" font-size="14">${escapeXml(space.name)}</text>` : ''}<rect x="${labelWidth}" y="${index * rowHeight}" width="${gradientWidth}" height="${rowHeight}" fill="url(#g${index})"/>`).join('');
+                const lines = selectionLines.map(line => `<line x1="${line.x - 4}" x2="${line.x - 4}" y1="${line.y - rowHeight / 2}" y2="${line.y + rowHeight / 2}" stroke="white" stroke-width="2"/><line x1="${line.x + 4}" x2="${line.x + 4}" y1="${line.y - rowHeight / 2}" y2="${line.y + rowHeight / 2}" stroke="black" stroke-width="2"/>`).join('');
+                const path = state.selector === 'closest' && selectionLines.length > 1
+                    ? `<polyline points="${selectionLines.map(line => `${line.x},${line.y}`).join(' ')}" fill="none" stroke="white" stroke-width="2" stroke-dasharray="2 4"/>`
+                    : '';
+                const labels = exportLabels.map(line => `<rect x="${line.labelX - line.width / 2}" y="${line.y - 10}" width="${line.width}" height="20" rx="4" fill="rgba(0,0,0,.65)"/><text x="${line.labelX}" y="${line.y + 4}" text-anchor="middle" fill="white" font-family="monospace" font-size="11">${escapeXml(line.value)}</text>`).join('');
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs>${defs}</defs>${rows}${path}${lines}${labels}</svg>`;
+                downloadBlob(new Blob([svg], {type: 'image/svg+xml'}), `${filenameBase}.svg`);
                 return;
             }
             const canvas = document.createElement('canvas');
-            canvas.width = NUM_STOPS;
-            canvas.height = 80;
+            canvas.width = width;
+            canvas.height = height;
             const context = canvas.getContext('2d');
-            samples.forEach((rgb, i) => {
-                context.fillStyle = rgbString(rgb);
-                context.fillRect(i, 0, 1, canvas.height);
+            spaces.forEach((space, index) => {
+                const samples = sampleSpace(space);
+                samples.forEach((rgb, i) => {
+                    context.fillStyle = rgbString(rgb);
+                    context.fillRect(labelWidth + i / NUM_STOPS * gradientWidth, index * rowHeight, gradientWidth / NUM_STOPS + 1, rowHeight);
+                });
+                if (includeLabels) {
+                    context.fillStyle = '#111827';
+                    context.fillRect(0, index * rowHeight, labelWidth, rowHeight);
+                    context.fillStyle = 'white';
+                    context.font = '14px sans-serif';
+                    context.textAlign = 'right';
+                    context.fillText(space.name, labelWidth - 12, index * rowHeight + rowHeight / 2 + 5);
+                }
             });
-            canvas.toBlob(blob => {
-                if (blob) downloadBlob(blob, filename);
-            }, 'image/png');
+            selectionLines.forEach(line => {
+                context.strokeStyle = 'white'; context.lineWidth = 2;
+                context.beginPath(); context.moveTo(line.x - 4, line.y - rowHeight / 2); context.lineTo(line.x - 4, line.y + rowHeight / 2); context.stroke();
+                context.strokeStyle = 'black';
+                context.beginPath(); context.moveTo(line.x + 4, line.y - rowHeight / 2); context.lineTo(line.x + 4, line.y + rowHeight / 2); context.stroke();
+            });
+            if (state.selector === 'closest' && selectionLines.length > 1) {
+                context.strokeStyle = 'white';
+                context.lineWidth = 2;
+                context.setLineDash([2, 4]);
+                context.beginPath();
+                selectionLines.forEach((line, index) => index ? context.lineTo(line.x, line.y) : context.moveTo(line.x, line.y));
+                context.stroke();
+                context.setLineDash([]);
+            }
+            exportLabels.forEach(line => {
+                context.font = '11px monospace';
+                context.textAlign = 'center';
+                context.fillStyle = 'rgba(0,0,0,.55)';
+                context.fillRect(line.labelX - line.width / 2, line.y - 10, line.width, 20);
+                context.fillStyle = 'white';
+                context.fillText(line.value, line.labelX, line.y + 4);
+            });
+            const mime = format === 'webp' ? 'image/webp' : 'image/png';
+            const extension = format === 'webp' ? 'webp' : 'png';
+            canvas.toBlob(blob => { if (blob) downloadBlob(blob, `${filenameBase}.${extension}`); }, mime);
         }
         
         function showModal(spaceId) {
@@ -1053,7 +1449,7 @@
             modalSpace = space;
 
             document.getElementById('modal-title').textContent = space.name;
-            document.getElementById('modal-body').innerHTML = spaceInfo[spaceId] || "Information not available.";
+            document.getElementById('modal-body').innerHTML = `${spaceInfo[spaceId] || "Information not available."}<br><a class="text-blue-300 hover:text-blue-200 underline" href="${space.url}" target="_blank" rel="noopener">More information</a>`;
             
             modal.classList.remove('hidden');
             // Trigger reflow to apply transition
@@ -1072,14 +1468,142 @@
 
         document.getElementById('modal-close').addEventListener('click', hideModal);
         document.getElementById('modal-save').addEventListener('click', () => {
-            if (modalSpace) saveSpace(modalSpace, document.getElementById('save-format').value);
+            if (modalSpace) saveSpaceCollection([modalSpace], state.exportFormat, exportFilename(modalSpace, '').replace(/\.$/, ''), true, false);
+        });
+        function updateSaveButtons() {
+            const label = `Save ${state.exportFormat.toUpperCase()}`;
+            document.getElementById('save-all').textContent = label;
+            document.getElementById('modal-save').textContent = label;
+            document.querySelectorAll('[data-save-format]').forEach(button => button.classList.toggle('active', button.dataset.saveFormat === state.exportFormat));
+        }
+
+        function setExportFormat(format) {
+            state.exportFormat = format;
+            updateSaveButtons();
+            persistState();
+        }
+
+        function toggleMenu(buttonId, menuId) {
+            const button = document.getElementById(buttonId);
+            const menu = document.getElementById(menuId);
+            menu.classList.toggle('hidden');
+            button.setAttribute('aria-expanded', String(!menu.classList.contains('hidden')));
+        }
+
+        document.getElementById('save-menu-button').addEventListener('click', event => {
+            event.preventDefault(); event.stopPropagation(); toggleMenu('save-menu-button', 'save-menu');
+        });
+        document.getElementById('modal-save-menu-button').addEventListener('click', event => {
+            event.preventDefault(); event.stopPropagation(); toggleMenu('modal-save-menu-button', 'modal-save-menu');
+        });
+        document.querySelectorAll('[data-save-format]').forEach(button => button.addEventListener('click', event => {
+            event.preventDefault(); event.stopPropagation();
+            setExportFormat(button.dataset.saveFormat);
+            const menu = button.closest('.split-menu');
+            menu.classList.add('hidden');
+            menu.previousElementSibling.setAttribute('aria-expanded', 'false');
+            if (menu.id === 'save-menu') document.getElementById('save-all').click();
+            else document.getElementById('modal-save').click();
+        }));
+        document.getElementById('save-all').addEventListener('click', () => {
+            const base = `color-spectrums_sat-${state.sat.toFixed(2)}_tint-${state.tint.toFixed(2)}_shade-${state.shade.toFixed(2)}_tone-${state.tone.toFixed(2)}`;
+            saveSpaceCollection(activeSpaces, state.exportFormat, base, true, true);
+        });
+        document.addEventListener('click', event => {
+            document.querySelectorAll('.split-menu').forEach(menu => {
+                if (!menu.parentElement.contains(event.target)) {
+                    menu.classList.add('hidden');
+                    const toggle = menu.previousElementSibling;
+                    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+
+        function renderSpacesPopover() {
+            const groups = ['All', 'Default', 'SDR', 'HDR', 'CIE', 'Perceptual'];
+            const groupHost = document.getElementById('space-groups');
+            groupHost.innerHTML = groups.map(group => `<button class="space-group bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs" data-group="${group}">${group}</button>`).join('');
+            groupHost.querySelectorAll('.space-group').forEach(button => button.addEventListener('click', () => {
+                const group = button.dataset.group;
+                const currentlyEnabled = new Set(enabledSpaceIds());
+                const groupIds = group === 'All'
+                    ? initialSpaces.map(space => space.id)
+                    : initialSpaces.filter(space => space.groups.includes(group)).map(space => space.id);
+                // sRGB remains as a reference when changing groups while it
+                // is already selected. Once explicitly removed, unrelated
+                // groups do not silently add it back.
+                if (currentlyEnabled.has('sRGB') && !groupIds.includes('sRGB')) groupIds.push('sRGB');
+                state.enabledIds = groupIds;
+                rebuildActiveSpaces();
+                renderSpacesPopover();
+                renderSpectrums();
+                persistState();
+            }));
+            const enabled = new Set(enabledSpaceIds());
+            document.getElementById('space-checkboxes').innerHTML = fullSpaceOrder.map(space => `<label class="flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" class="space-checkbox accent-blue-500" data-space-id="${space.id}" ${enabled.has(space.id) ? 'checked' : ''}><span>${space.name}</span><span class="text-xs text-gray-500 ml-auto">${space.groups.join(' · ')}</span></label>`).join('');
+            document.querySelectorAll('.space-checkbox').forEach(input => input.addEventListener('change', () => {
+                const selected = new Set(enabledSpaceIds());
+                if (input.checked) selected.add(input.dataset.spaceId); else selected.delete(input.dataset.spaceId);
+                state.enabledIds = [...selected];
+                rebuildActiveSpaces();
+                renderSpacesPopover();
+                renderSpectrums();
+                persistState();
+            }));
+        }
+
+        document.getElementById('btn-spaces').addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('spaces-popover').classList.toggle('hidden');
+        });
+        document.addEventListener('click', event => {
+            if (!event.target.closest('#btn-spaces') && !event.target.closest('#spaces-popover')) document.getElementById('spaces-popover').classList.add('hidden');
+        });
+        document.getElementById('top-controls').addEventListener('toggle', event => {
+            state.controlsOpen = event.target.open;
+            document.getElementById('top-control-panel').classList.toggle('p-4', event.target.open);
+            document.getElementById('top-control-panel').classList.toggle('p-1', !event.target.open);
+            requestAnimationFrame(() => {
+                fitRowHeights();
+                renderSelectorOverlays(state.lastHover);
+                refreshPinnedPointTooltip();
+            });
+            persistState();
         });
         modal.addEventListener('click', (e) => {
             if (e.target === modal) hideModal();
         });
 
         // Initialize App
+        restoreState();
+        rebuildActiveSpaces();
+        controls.forEach(id => {
+            const input = document.getElementById(`ctrl-${id}`);
+            const value = state[id];
+            input.value = value;
+            document.getElementById(`val-${id}`).textContent = id === 'zoom' ? Number(value).toFixed(1) + 'x' : Number(value).toFixed(2);
+        });
+        document.getElementById('ctrl-order').value = state.order;
+        document.getElementById('ctrl-inverse').classList.toggle('bg-blue-600', state.inverse);
+        document.getElementById('ctrl-inverse').classList.toggle('bg-gray-700', !state.inverse);
+        document.getElementById('top-controls').open = state.controlsOpen;
+        document.getElementById('top-control-panel').classList.toggle('p-4', state.controlsOpen);
+        document.getElementById('top-control-panel').classList.toggle('p-1', !state.controlsOpen);
+        updateSaveButtons();
+        setButtonGroup('.format-button', state.format);
+        setButtonGroup('.selector-button', state.selector);
+        renderSpacesPopover();
         renderSpectrums();
+        if (state.selectionPinned && state.lastHover && activeSpaces[state.lastHover.rowIndex]) {
+            const target = getSelectionFor(activeSpaces[state.lastHover.rowIndex], state.lastHover.t, null);
+            updateSelectedValues(activeSpaces.map((space, index) => ({
+                space,
+                rgb: getSelectionFor(space, state.lastHover.t, state.selector === 'closest' ? target.rgb : null).rgb,
+                rowIndex: index
+            })));
+            renderSelectorOverlays(state.lastHover);
+        }
 
     </script>
 </body>
